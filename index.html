@@ -334,29 +334,22 @@ function buildSummaryPage(){
   var KPI_TARGET=50;
   var dates=D.all_dates;
   var lastDate=dates[dates.length-1];
+  var lines=['K','G','H'];
+  var lineColors={K:'#f59e0b',G:'#06b6d4',H:'#22c55e'};
 
-  // Determine week dates (last 7 available dates) and month dates (last 30 available dates)
   var weekDates=dates.slice(Math.max(0,dates.length-7));
   var monthDates=dates.slice(Math.max(0,dates.length-30));
 
-  // Helper: get total stop time for a given date
-  function getStopTimeByDate(dt){
-    return D.allRows.filter(function(r){return r.ds===dt&&r.stop}).reduce(function(s,r){return s+r.time},0);
+  // Helper: get stop time for a line on a specific date
+  function getLineStopTime(dt,line){
+    return D.allRows.filter(function(r){return r.ds===dt&&r.line===line&&r.stop}).reduce(function(s,r){return s+r.time},0);
   }
-  // Helper: get total time for a given date
-  function getTotalTimeByDate(dt){
-    return D.allRows.filter(function(r){return r.ds===dt}).reduce(function(s,r){return s+r.time},0);
+  // Helper: get average stop time for a line over multiple dates
+  function getLineStopAvg(dts,line){
+    if(!dts.length)return 0;
+    var total=dts.reduce(function(s,dt){return s+getLineStopTime(dt,line)},0);
+    return total/dts.length;
   }
-  // Helper: get total defect for a given date
-  function getTotalDefectByDate(dt){
-    return D.allRows.filter(function(r){return r.ds===dt}).reduce(function(s,r){return s+r.defect},0);
-  }
-
-  var prevDayStop=getStopTimeByDate(lastDate);
-  var weekStopArr=weekDates.map(getStopTimeByDate);
-  var monthStopArr=monthDates.map(getStopTimeByDate);
-  var weekStopAvg=weekStopArr.length?weekStopArr.reduce(function(a,b){return a+b},0)/weekStopArr.length:0;
-  var monthStopAvg=monthStopArr.length?monthStopArr.reduce(function(a,b){return a+b},0)/monthStopArr.length:0;
 
   function fmtVal(v,target){
     var rounded=Math.round(v);
@@ -365,48 +358,85 @@ function buildSummaryPage(){
   }
   function statusIcon(v,target){return v<=target?'<span style="color:#22c55e;font-size:16px">&#9679;</span>':'<span style="color:#ef4444;font-size:16px">&#9679;</span>'}
 
-  // === Section 1: Stop Time Table with KPI ===
-  var h='<div class="sum-section"><div class="bx"><h3>&#9201; 정지시간 KPI 현황 <em>목표: '+KPI_TARGET+'분/일</em></h3>';
-  h+='<table class="sum-tbl"><thead><tr><th>구분</th><th>정지시간</th><th>KPI 목표</th><th>달성</th></tr></thead><tbody>';
-  h+='<tr><td><strong>전일</strong> ('+lastDate+')</td><td>'+fmtVal(prevDayStop,KPI_TARGET)+'</td><td class="kpi-target">'+KPI_TARGET+'분</td><td>'+statusIcon(prevDayStop,KPI_TARGET)+'</td></tr>';
-  h+='<tr><td><strong>주간 평균</strong> (최근 '+weekDates.length+'일)</td><td>'+fmtVal(weekStopAvg,KPI_TARGET)+'</td><td class="kpi-target">'+KPI_TARGET+'분</td><td>'+statusIcon(weekStopAvg,KPI_TARGET)+'</td></tr>';
-  h+='<tr><td><strong>월간 평균</strong> (최근 '+monthDates.length+'일)</td><td>'+fmtVal(monthStopAvg,KPI_TARGET)+'</td><td class="kpi-target">'+KPI_TARGET+'분</td><td>'+statusIcon(monthStopAvg,KPI_TARGET)+'</td></tr>';
+  // === Section 1: Stop Time KPI by Line ===
+  var h='<div class="sum-section"><div class="bx"><h3>&#9201; 라인별 정지시간 KPI 현황 <em>목표: '+KPI_TARGET+'분/일 (라인별 평균)</em></h3>';
+  h+='<table class="sum-tbl"><thead><tr><th>구분</th>';
+  lines.forEach(function(ln){h+='<th style="color:'+lineColors[ln]+'">'+ln+' Line</th>'});
+  h+='<th>KPI 목표</th></tr></thead><tbody>';
+
+  // 전일
+  h+='<tr><td><strong>전일</strong> ('+lastDate+')</td>';
+  lines.forEach(function(ln){
+    var v=getLineStopTime(lastDate,ln);
+    h+='<td>'+fmtVal(v,KPI_TARGET)+' '+statusIcon(v,KPI_TARGET)+'</td>';
+  });
+  h+='<td class="kpi-target">'+KPI_TARGET+'분</td></tr>';
+
+  // 주간 평균
+  h+='<tr><td><strong>주간 평균</strong> (최근 '+weekDates.length+'일)</td>';
+  lines.forEach(function(ln){
+    var v=getLineStopAvg(weekDates,ln);
+    h+='<td>'+fmtVal(v,KPI_TARGET)+' '+statusIcon(v,KPI_TARGET)+'</td>';
+  });
+  h+='<td class="kpi-target">'+KPI_TARGET+'분</td></tr>';
+
+  // 월간 평균
+  h+='<tr><td><strong>월간 평균</strong> (최근 '+monthDates.length+'일)</td>';
+  lines.forEach(function(ln){
+    var v=getLineStopAvg(monthDates,ln);
+    h+='<td>'+fmtVal(v,KPI_TARGET)+' '+statusIcon(v,KPI_TARGET)+'</td>';
+  });
+  h+='<td class="kpi-target">'+KPI_TARGET+'분</td></tr>';
   h+='</tbody></table></div></div>';
 
-  // === Section 2: Previous day Worst 5 - Time & Quantity ===
+  // === Section 2: Previous day Worst 5 - Combined Time + Defect + Adjustment Items ===
   var prevRows=D.allRows.filter(function(r){return r.ds===lastDate});
 
-  // Aggregate by equipment for previous day
-  var eqTimeMap={},eqDefMap={};
+  // Aggregate by equipment: time, defect, adjustment items
+  var eqAgg={};
   prevRows.forEach(function(r){
-    if(!eqTimeMap[r.eq])eqTimeMap[r.eq]=0;
-    if(!eqDefMap[r.eq])eqDefMap[r.eq]=0;
-    eqTimeMap[r.eq]+=r.time;
-    eqDefMap[r.eq]+=r.defect;
+    if(!eqAgg[r.eq])eqAgg[r.eq]={time:0,defect:0,subs:{}};
+    eqAgg[r.eq].time+=r.time;
+    eqAgg[r.eq].defect+=r.defect;
+    var subKey=r.sub||'기타';
+    if(!eqAgg[r.eq].subs[subKey])eqAgg[r.eq].subs[subKey]=0;
+    eqAgg[r.eq].subs[subKey]++;
   });
 
-  var timeWorst5=Object.keys(eqTimeMap).map(function(eq){return{eq:eq,val:eqTimeMap[eq]}}).sort(function(a,b){return b.val-a.val}).slice(0,5);
-  var defWorst5=Object.keys(eqDefMap).map(function(eq){return{eq:eq,val:eqDefMap[eq]}}).sort(function(a,b){return b.val-a.val}).slice(0,5);
+  // Get top adjustment items summary for an equipment
+  function getTopSubs(subsMap){
+    var arr=Object.keys(subsMap).map(function(k){return{name:k,cnt:subsMap[k]}}).sort(function(a,b){return b.cnt-a.cnt});
+    return arr.slice(0,3).map(function(s){return s.name+'('+s.cnt+')'}).join(', ');
+  }
+
+  // Sort by time desc for Worst 5
+  var timeWorst5=Object.keys(eqAgg).map(function(eq){return{eq:eq,time:eqAgg[eq].time,defect:eqAgg[eq].defect,subs:eqAgg[eq].subs}}).sort(function(a,b){return b.time-a.time}).slice(0,5);
+  // Sort by defect desc for Worst 5
+  var defWorst5=Object.keys(eqAgg).map(function(eq){return{eq:eq,time:eqAgg[eq].time,defect:eqAgg[eq].defect,subs:eqAgg[eq].subs}}).sort(function(a,b){return b.defect-a.defect}).slice(0,5);
 
   h+='<div class="sum-section"><div class="bx"><h3>&#128308; 전일 ('+lastDate+') Worst 5 설비</h3>';
   h+='<div class="worst-grid">';
 
   // Time Worst 5
-  h+='<div class="worst-card"><h4 style="color:#f59e0b">&#9200; 정지시간 Worst 5</h4>';
-  h+='<table class="worst-tbl"><thead><tr><th>#</th><th>설비</th><th>시간(분)</th></tr></thead><tbody>';
+  h+='<div class="worst-card"><h4 style="color:#f59e0b">&#9200; 정지시간 기준 Worst 5</h4>';
+  h+='<table class="worst-tbl"><thead><tr><th>#</th><th>설비</th><th>시간(분)<br><span style="font-size:10px;color:#94a3b8">불량수량</span></th><th>주요 조정항목</th></tr></thead><tbody>';
   timeWorst5.forEach(function(item,i){
-    h+='<tr><td>'+(i+1)+'</td><td>'+item.eq+'</td><td>'+Math.round(item.val).toLocaleString()+'</td></tr>';
+    h+='<tr><td>'+(i+1)+'</td><td>'+item.eq+'</td>';
+    h+='<td><span style="color:#f59e0b;font-weight:700">'+Math.round(item.time).toLocaleString()+'분</span><br><span style="font-size:11px;color:#94a3b8">불량 '+Math.round(item.defect).toLocaleString()+'</span></td>';
+    h+='<td style="text-align:left;font-size:11px">'+getTopSubs(item.subs)+'</td></tr>';
   });
-  if(!timeWorst5.length)h+='<tr><td colspan="3" style="color:#94a3b8">데이터 없음</td></tr>';
+  if(!timeWorst5.length)h+='<tr><td colspan="4" style="color:#94a3b8">데이터 없음</td></tr>';
   h+='</tbody></table></div>';
 
   // Defect Worst 5
-  h+='<div class="worst-card"><h4 style="color:#ef4444">&#128165; 불량수량 Worst 5</h4>';
-  h+='<table class="worst-tbl"><thead><tr><th>#</th><th>설비</th><th>불량수량</th></tr></thead><tbody>';
+  h+='<div class="worst-card"><h4 style="color:#ef4444">&#128165; 불량수량 기준 Worst 5</h4>';
+  h+='<table class="worst-tbl"><thead><tr><th>#</th><th>설비</th><th>불량수량<br><span style="font-size:10px;color:#94a3b8">시간(분)</span></th><th>주요 조정항목</th></tr></thead><tbody>';
   defWorst5.forEach(function(item,i){
-    h+='<tr><td>'+(i+1)+'</td><td>'+item.eq+'</td><td>'+Math.round(item.val).toLocaleString()+'</td></tr>';
+    h+='<tr><td>'+(i+1)+'</td><td>'+item.eq+'</td>';
+    h+='<td><span style="color:#ef4444;font-weight:700">'+Math.round(item.defect).toLocaleString()+'</span><br><span style="font-size:11px;color:#94a3b8">'+Math.round(item.time).toLocaleString()+'분</span></td>';
+    h+='<td style="text-align:left;font-size:11px">'+getTopSubs(item.subs)+'</td></tr>';
   });
-  if(!defWorst5.length)h+='<tr><td colspan="3" style="color:#94a3b8">데이터 없음</td></tr>';
+  if(!defWorst5.length)h+='<tr><td colspan="4" style="color:#94a3b8">데이터 없음</td></tr>';
   h+='</tbody></table></div>';
 
   h+='</div></div></div>';
