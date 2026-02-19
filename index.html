@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>설비조정이력 분석 v1.9</title>
+<title>설비조정이력 분석 v2.0</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -19,6 +19,24 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#000;color:#e2e8f0}
 .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px;padding:10px 20px;background:#0a0a0a}
 .kpi-item{text-align:center;padding:6px 4px}
 .kpi-item .v{font-size:17px;font-weight:700;color:#60a5fa}.kpi-item .l{font-size:10px;color:#94a3b8;margin-top:2px}
+.sum-section{margin-bottom:20px}
+.sum-section h3{font-size:14px;color:#60a5fa;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #1a1a1a}
+.sum-tbl{border-collapse:collapse;width:100%;font-size:13px;margin-bottom:10px}
+.sum-tbl th,.sum-tbl td{padding:8px 12px;border:1px solid #1a1a1a;text-align:center}
+.sum-tbl th{background:#1a1a1a;color:#e2e8f0;font-weight:700;white-space:nowrap}
+.sum-tbl td{color:#cbd5e1}
+.sum-tbl .good{color:#22c55e;font-weight:700}
+.sum-tbl .bad{color:#ef4444;font-weight:700}
+.sum-tbl .kpi-target{color:#f59e0b;font-weight:600;font-size:11px}
+.worst-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:700px){.worst-grid{grid-template-columns:1fr}}
+.worst-card{background:#111;border-radius:10px;border:1px solid #1a1a1a;padding:12px}
+.worst-card h4{font-size:13px;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid #1a1a1a}
+.worst-tbl{border-collapse:collapse;width:100%;font-size:12px}
+.worst-tbl th,.worst-tbl td{padding:5px 8px;border:1px solid #1a1a1a;text-align:center}
+.worst-tbl th{background:#1a1a1a;color:#e2e8f0;font-size:11px}
+.worst-tbl td{color:#cbd5e1}
+.worst-tbl tr:first-child td{color:#ef4444;font-weight:700}
 .tabs{display:flex;flex-wrap:wrap;gap:4px;padding:10px 16px;background:#0a0a0a;border-bottom:1px solid #1a1a1a;position:sticky;top:0;z-index:100}
 .tab{padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;background:#1a1a1a;color:#94a3b8;border:1px solid #2a2a2a;transition:all .2s;white-space:nowrap;touch-action:manipulation}
 .tab.on{background:#3b82f6;color:#fff;border-color:#3b82f6}
@@ -66,7 +84,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd">
-<h1>📊 설비조정이력 분석 <span class="ver">v1.9</span></h1>
+<h1>📊 설비조정이력 분석 <span class="ver">v2.0</span></h1>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
 <div class="file-bar">
@@ -76,7 +94,7 @@ table.ht thead th:first-child{z-index:4}
 <span class="file-status" id="fileStatus" style="color:#94a3b8">대기중</span>
 <button id="clearBtn" style="display:none;background:#ef4444;color:#fff;padding:6px 14px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;min-height:36px;touch-action:manipulation" onclick="clearData()">🗑 초기화</button>
 </div>
-<div class="kpi" id="kpiArea" style="display:none"></div>
+<!-- KPI area removed -->
 <div class="tabs" id="tabArea" style="display:none"></div>
 <div id="root">
 <div class="welcome">
@@ -109,7 +127,6 @@ function handleFile(input){
         var nd=processWorkbook(wb);
         if(nd){
           D=nd;
-          document.getElementById('kpiArea').style.display='';
           document.getElementById('tabArea').style.display='';
           renderAll();
           try{localStorage.setItem('dashData',JSON.stringify(D));localStorage.setItem('dashFile',file.name)}catch(e){}
@@ -312,35 +329,171 @@ function makeStopChart(canvasId, data, barColorStop, barColorNon){
   }}});
 }
 
+function buildSummaryPage(){
+  if(!D||!D.allRows||!D.all_dates||D.all_dates.length===0)return'<div style="padding:20px;color:#94a3b8">데이터가 부족합니다</div>';
+  var KPI_TARGET=50;
+  var dates=D.all_dates;
+  var lastDate=dates[dates.length-1];
+
+  // Determine week dates (last 7 available dates) and month dates (last 30 available dates)
+  var weekDates=dates.slice(Math.max(0,dates.length-7));
+  var monthDates=dates.slice(Math.max(0,dates.length-30));
+
+  // Helper: get total stop time for a given date
+  function getStopTimeByDate(dt){
+    return D.allRows.filter(function(r){return r.ds===dt&&r.stop}).reduce(function(s,r){return s+r.time},0);
+  }
+  // Helper: get total time for a given date
+  function getTotalTimeByDate(dt){
+    return D.allRows.filter(function(r){return r.ds===dt}).reduce(function(s,r){return s+r.time},0);
+  }
+  // Helper: get total defect for a given date
+  function getTotalDefectByDate(dt){
+    return D.allRows.filter(function(r){return r.ds===dt}).reduce(function(s,r){return s+r.defect},0);
+  }
+
+  var prevDayStop=getStopTimeByDate(lastDate);
+  var weekStopArr=weekDates.map(getStopTimeByDate);
+  var monthStopArr=monthDates.map(getStopTimeByDate);
+  var weekStopAvg=weekStopArr.length?weekStopArr.reduce(function(a,b){return a+b},0)/weekStopArr.length:0;
+  var monthStopAvg=monthStopArr.length?monthStopArr.reduce(function(a,b){return a+b},0)/monthStopArr.length:0;
+
+  function fmtVal(v,target){
+    var rounded=Math.round(v);
+    var cls=rounded<=target?'good':'bad';
+    return'<span class="'+cls+'">'+rounded.toLocaleString()+'분</span>';
+  }
+  function statusIcon(v,target){return v<=target?'<span style="color:#22c55e;font-size:16px">&#9679;</span>':'<span style="color:#ef4444;font-size:16px">&#9679;</span>'}
+
+  // === Section 1: Stop Time Table with KPI ===
+  var h='<div class="sum-section"><div class="bx"><h3>&#9201; 정지시간 KPI 현황 <em>목표: '+KPI_TARGET+'분/일</em></h3>';
+  h+='<table class="sum-tbl"><thead><tr><th>구분</th><th>정지시간</th><th>KPI 목표</th><th>달성</th></tr></thead><tbody>';
+  h+='<tr><td><strong>전일</strong> ('+lastDate+')</td><td>'+fmtVal(prevDayStop,KPI_TARGET)+'</td><td class="kpi-target">'+KPI_TARGET+'분</td><td>'+statusIcon(prevDayStop,KPI_TARGET)+'</td></tr>';
+  h+='<tr><td><strong>주간 평균</strong> (최근 '+weekDates.length+'일)</td><td>'+fmtVal(weekStopAvg,KPI_TARGET)+'</td><td class="kpi-target">'+KPI_TARGET+'분</td><td>'+statusIcon(weekStopAvg,KPI_TARGET)+'</td></tr>';
+  h+='<tr><td><strong>월간 평균</strong> (최근 '+monthDates.length+'일)</td><td>'+fmtVal(monthStopAvg,KPI_TARGET)+'</td><td class="kpi-target">'+KPI_TARGET+'분</td><td>'+statusIcon(monthStopAvg,KPI_TARGET)+'</td></tr>';
+  h+='</tbody></table></div></div>';
+
+  // === Section 2: Previous day Worst 5 - Time & Quantity ===
+  var prevRows=D.allRows.filter(function(r){return r.ds===lastDate});
+
+  // Aggregate by equipment for previous day
+  var eqTimeMap={},eqDefMap={};
+  prevRows.forEach(function(r){
+    if(!eqTimeMap[r.eq])eqTimeMap[r.eq]=0;
+    if(!eqDefMap[r.eq])eqDefMap[r.eq]=0;
+    eqTimeMap[r.eq]+=r.time;
+    eqDefMap[r.eq]+=r.defect;
+  });
+
+  var timeWorst5=Object.keys(eqTimeMap).map(function(eq){return{eq:eq,val:eqTimeMap[eq]}}).sort(function(a,b){return b.val-a.val}).slice(0,5);
+  var defWorst5=Object.keys(eqDefMap).map(function(eq){return{eq:eq,val:eqDefMap[eq]}}).sort(function(a,b){return b.val-a.val}).slice(0,5);
+
+  h+='<div class="sum-section"><div class="bx"><h3>&#128308; 전일 ('+lastDate+') Worst 5 설비</h3>';
+  h+='<div class="worst-grid">';
+
+  // Time Worst 5
+  h+='<div class="worst-card"><h4 style="color:#f59e0b">&#9200; 정지시간 Worst 5</h4>';
+  h+='<table class="worst-tbl"><thead><tr><th>#</th><th>설비</th><th>시간(분)</th></tr></thead><tbody>';
+  timeWorst5.forEach(function(item,i){
+    h+='<tr><td>'+(i+1)+'</td><td>'+item.eq+'</td><td>'+Math.round(item.val).toLocaleString()+'</td></tr>';
+  });
+  if(!timeWorst5.length)h+='<tr><td colspan="3" style="color:#94a3b8">데이터 없음</td></tr>';
+  h+='</tbody></table></div>';
+
+  // Defect Worst 5
+  h+='<div class="worst-card"><h4 style="color:#ef4444">&#128165; 불량수량 Worst 5</h4>';
+  h+='<table class="worst-tbl"><thead><tr><th>#</th><th>설비</th><th>불량수량</th></tr></thead><tbody>';
+  defWorst5.forEach(function(item,i){
+    h+='<tr><td>'+(i+1)+'</td><td>'+item.eq+'</td><td>'+Math.round(item.val).toLocaleString()+'</td></tr>';
+  });
+  if(!defWorst5.length)h+='<tr><td colspan="3" style="color:#94a3b8">데이터 없음</td></tr>';
+  h+='</tbody></table></div>';
+
+  h+='</div></div></div>';
+
+  // === Section 3: Weekly performance chart for worst 5 equipment (by time) ===
+  h+='<div class="sum-section"><div class="bx"><h3>&#128200; 전일 정지시간 Worst 5 - 주간 실적 추이</h3>';
+  h+='<div style="position:relative;max-height:400px"><canvas id="worstWeekChart"></canvas></div>';
+  h+='</div></div>';
+
+  return h;
+}
+
+function renderWorstWeekChart(){
+  if(!D||!D.allRows||!D.all_dates||D.all_dates.length===0)return;
+  var dates=D.all_dates;
+  var lastDate=dates[dates.length-1];
+  var weekDates=dates.slice(Math.max(0,dates.length-7));
+
+  // Get worst 5 by time for previous day
+  var prevRows=D.allRows.filter(function(r){return r.ds===lastDate});
+  var eqTimeMap={};
+  prevRows.forEach(function(r){
+    if(!eqTimeMap[r.eq])eqTimeMap[r.eq]=0;
+    eqTimeMap[r.eq]+=r.time;
+  });
+  var worst5=Object.keys(eqTimeMap).map(function(eq){return{eq:eq,val:eqTimeMap[eq]}}).sort(function(a,b){return b.val-a.val}).slice(0,5);
+  if(!worst5.length)return;
+
+  var colors=['#ef4444','#f59e0b','#3b82f6','#22c55e','#a855f7'];
+  var datasets=worst5.map(function(item,idx){
+    var data=weekDates.map(function(d){
+      return D.allRows.filter(function(r){return r.eq===item.eq&&r.ds===d}).reduce(function(s,r){return s+r.time},0);
+    });
+    return{
+      label:item.eq,
+      data:data,
+      borderColor:colors[idx%5],
+      backgroundColor:colors[idx%5]+'33',
+      borderWidth:2,
+      pointRadius:4,
+      pointBackgroundColor:colors[idx%5],
+      tension:0.3,
+      fill:false
+    };
+  });
+
+  var canvas=document.getElementById('worstWeekChart');
+  if(!canvas)return;
+  var ch=new Chart(canvas,{
+    type:'line',
+    data:{labels:weekDates,datasets:datasets},
+    options:{
+      responsive:true,maintainAspectRatio:true,
+      plugins:{
+        legend:{labels:{color:'#e2e8f0',font:{size:11}},position:'bottom'},
+        tooltip:{backgroundColor:'#0a0a0a',titleColor:'#60a5fa',bodyColor:'#e2e8f0',callbacks:{label:function(c){return c.dataset.label+': '+Math.round(c.parsed.y).toLocaleString()+'분'}}}
+      },
+      scales:{
+        x:{ticks:{color:'#94a3b8',font:{size:11}},grid:{color:'#1a1a1a'}},
+        y:{ticks:{color:'#94a3b8',callback:function(v){return v+'분'}},grid:{color:'#1a1a1a'},title:{display:true,text:'정지시간(분)',color:'#94a3b8',font:{size:11}},
+          beginAtZero:true
+        }
+      }
+    }
+  });
+  charts.push(ch);
+}
+
 function renderAll(){
   charts.forEach(function(c){try{c.destroy()}catch(e){}});charts=[];
   if(!D)return;
 
   var ls=D.lineSummary||{};
-  var todayData=D.daily[D.daily.length-1]||{cnt:0,defect:0,time:0,stop:0};
-  var yesterData=D.daily.length>=2?D.daily[D.daily.length-2]:{cnt:0,defect:0,time:0,stop:0};
-  document.getElementById('kpiArea').innerHTML=
-    '<div class="kpi-item"><div class="v">'+D.totalRec.toLocaleString()+'</div><div class="l">총 건수</div></div>'+
-    '<div class="kpi-item"><div class="v" style="color:#ef4444">'+D.totalDef.toLocaleString()+'</div><div class="l">총 불량</div></div>'+
-    '<div class="kpi-item"><div class="v" style="color:#f59e0b">'+D.totalTime.toLocaleString()+'</div><div class="l">총 시간(분)</div></div>'+
-    '<div class="kpi-item"><div class="v" style="color:#a855f7">'+D.stopCnt.toLocaleString()+'</div><div class="l">정지건수</div></div>'+
-    '<div class="kpi-item"><div class="v" style="color:#38bdf8">'+todayData.cnt.toLocaleString()+'</div><div class="l">오늘 ('+todayData['일자str']+')</div></div>'+
-    '<div class="kpi-item"><div class="v" style="color:#94a3b8">'+yesterData.cnt.toLocaleString()+'</div><div class="l">어제 ('+yesterData['일자str']+')</div></div>'+
-    '<div class="kpi-item"><div class="v" style="color:#06b6d4">'+((ls.G||{}).cnt||'?')+'</div><div class="l">G Line</div></div>'+
-    '<div class="kpi-item"><div class="v" style="color:#22c55e">'+((ls.H||{}).cnt||'?')+'</div><div class="l">H Line</div></div>'+
-    '<div class="kpi-item"><div class="v" style="color:#f59e0b">'+((ls.K||{}).cnt||'?')+'</div><div class="l">K Line</div></div>';
 
   document.getElementById('info').textContent=D.dateRange+' | PM调整 Only | 停机/开机 제외 | >1000분 제외 | 설비 '+D.eqCnt+'대';
 
   document.getElementById('tabArea').innerHTML=
-    '<div class="tab on" onclick="go(0)">📅 일자별 추이</div>'+
-    '<div class="tab" onclick="go(1)">🔥 히트맵(불량/일자)</div>'+
-    '<div class="tab" onclick="go(2)">🔥 히트맵(시간/일자)</div>';
+    '<div class="tab on" onclick="go(0)">📋 요약</div>'+
+    '<div class="tab" onclick="go(1)">📅 일자별 추이</div>'+
+    '<div class="tab" onclick="go(2)">🔥 히트맵(불량/일자)</div>'+
+    '<div class="tab" onclick="go(3)">🔥 히트맵(시간/일자)</div>';
 
   var legend='<div class="lg"><div class="li"><div class="lc" style="background:#0a0a0a;border:1px solid #1a1a1a"></div>0</div><div class="li"><div class="lc" style="background:rgba(59,130,246,0.3)"></div>Low</div><div class="li"><div class="lc" style="background:rgba(251,191,36,0.5)"></div>Mid</div><div class="li"><div class="lc" style="background:rgba(239,68,68,0.7)"></div>High</div></div>';
 
   document.getElementById('root').innerHTML=
-  '<div class="pn on">'+
+  '<div class="pn on" id="summaryPanel">'+buildSummaryPage()+'</div>'+
+  '<div class="pn">'+
     '<div class="bx"><h3>📅 전체 일자별 건수 / 불량수량 / 정지시간<em>Total '+D.totalRec.toLocaleString()+'건</em></h3><canvas id="dAll"></canvas></div>'+
     '<div class="bx"><h3>📅 전체 정지 vs 비정지<em>Stacked</em></h3><canvas id="dAllS"></canvas></div>'+
     '<hr style="border:1px solid #1a1a1a;margin:20px 0">'+
@@ -355,6 +508,9 @@ function renderAll(){
   '</div>'+
   '<div class="pn"><div class="bx"><h3>🔥 설비 일자별 불량수량</h3>'+legend+'<div class="hc" id="hm_def"></div></div></div>'+
   '<div class="pn"><div class="bx"><h3>🔥 설비 일자별 조정시간(분)</h3>'+legend+'<div class="hc" id="hm_time"></div></div></div>';
+
+  // Render summary chart
+  renderWorstWeekChart();
 
   charts.push(makeDailyChart('dAll', D.daily, 'Total', '#3b82f6', null));
   charts.push(makeStopChart('dAllS', D.daily, '#ef4444', '#22c55e'));
@@ -372,7 +528,6 @@ function renderAll(){
 function clearData(){
   localStorage.removeItem('dashData');localStorage.removeItem('dashFile');
   D=null;charts.forEach(function(c){try{c.destroy()}catch(e){}});charts=[];
-  document.getElementById('kpiArea').style.display='none';document.getElementById('kpiArea').innerHTML='';
   document.getElementById('tabArea').style.display='none';document.getElementById('tabArea').innerHTML='';
   document.getElementById('root').innerHTML='<div class="welcome"><div class="arrow">👆</div><h2>파일을 업로드해주세요</h2><p>📂 위 버튼을 눌러 엑셀 파일을 선택하세요</p></div>';
   document.getElementById('fileName').textContent='파일을 선택해주세요';
@@ -387,7 +542,6 @@ function clearData(){
     if(saved){
       D=JSON.parse(saved);
       var fn=localStorage.getItem('dashFile')||'저장된 데이터';
-      document.getElementById('kpiArea').style.display='';
       document.getElementById('tabArea').style.display='';
       renderAll();
       document.getElementById('fileName').textContent='현재: '+fn;
