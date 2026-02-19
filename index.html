@@ -340,15 +340,46 @@ function buildSummaryPage(){
   var weekDates=dates.slice(Math.max(0,dates.length-7));
   var monthDates=dates.slice(Math.max(0,dates.length-30));
 
-  // Helper: get stop time for a line on a specific date
-  function getLineStopTime(dt,line){
-    return D.allRows.filter(function(r){return r.ds===dt&&r.line===line&&r.stop}).reduce(function(s,r){return s+r.time},0);
+  // Helper: get average stop time per equipment for a line on a date
+  // e.g. K12=30min, K11=30min → avg = (30+30)/2 = 30min
+  function getLineEqAvgStop(dt,line){
+    var rows=D.allRows.filter(function(r){return r.ds===dt&&r.line===line});
+    if(!rows.length)return 0;
+    var eqMap={};
+    rows.forEach(function(r){
+      if(!eqMap[r.eq])eqMap[r.eq]=0;
+      if(r.stop)eqMap[r.eq]+=r.time;
+    });
+    var eqs=Object.keys(eqMap);
+    if(!eqs.length)return 0;
+    var total=eqs.reduce(function(s,eq){return s+eqMap[eq]},0);
+    return total/eqs.length;
   }
-  // Helper: get average stop time for a line over multiple dates
-  function getLineStopAvg(dts,line){
+  // Helper: average of daily equipment averages over multiple dates
+  function getLineEqAvgStopMulti(dts,line){
     if(!dts.length)return 0;
-    var total=dts.reduce(function(s,dt){return s+getLineStopTime(dt,line)},0);
-    return total/dts.length;
+    var sum=dts.reduce(function(s,dt){return s+getLineEqAvgStop(dt,line)},0);
+    return sum/dts.length;
+  }
+  // Helper: get average stop time per equipment for ALL lines on a date
+  function getAllEqAvgStop(dt){
+    var rows=D.allRows.filter(function(r){return r.ds===dt});
+    if(!rows.length)return 0;
+    var eqMap={};
+    rows.forEach(function(r){
+      if(!eqMap[r.eq])eqMap[r.eq]=0;
+      if(r.stop)eqMap[r.eq]+=r.time;
+    });
+    var eqs=Object.keys(eqMap);
+    if(!eqs.length)return 0;
+    var total=eqs.reduce(function(s,eq){return s+eqMap[eq]},0);
+    return total/eqs.length;
+  }
+  // Helper: average of daily equipment averages for ALL lines over multiple dates
+  function getAllEqAvgStopMulti(dts){
+    if(!dts.length)return 0;
+    var sum=dts.reduce(function(s,dt){return s+getAllEqAvgStop(dt)},0);
+    return sum/dts.length;
   }
 
   function fmtVal(v,target){
@@ -358,32 +389,38 @@ function buildSummaryPage(){
   }
   function statusIcon(v,target){return v<=target?'<span style="color:#22c55e;font-size:16px">&#9679;</span>':'<span style="color:#ef4444;font-size:16px">&#9679;</span>'}
 
-  // === Section 1: Stop Time KPI by Line ===
-  var h='<div class="sum-section"><div class="bx"><h3>&#9201; 라인별 정지시간 KPI 현황 <em>목표: '+KPI_TARGET+'분/일 (라인별 평균)</em></h3>';
-  h+='<table class="sum-tbl"><thead><tr><th>구분</th>';
+  // === Section 1: Stop Time KPI by Line (per-equipment average) ===
+  var h='<div class="sum-section"><div class="bx"><h3>&#9201; 라인별 정지시간 KPI 현황 <em>목표: '+KPI_TARGET+'분/일 (설비별 평균)</em></h3>';
+  h+='<table class="sum-tbl"><thead><tr><th>구분</th><th style="color:#60a5fa">전체</th>';
   lines.forEach(function(ln){h+='<th style="color:'+lineColors[ln]+'">'+ln+' Line</th>'});
   h+='<th>KPI 목표</th></tr></thead><tbody>';
 
   // 전일
+  var allDayAvg=getAllEqAvgStop(lastDate);
   h+='<tr><td><strong>전일</strong> ('+lastDate+')</td>';
+  h+='<td>'+fmtVal(allDayAvg,KPI_TARGET)+' '+statusIcon(allDayAvg,KPI_TARGET)+'</td>';
   lines.forEach(function(ln){
-    var v=getLineStopTime(lastDate,ln);
+    var v=getLineEqAvgStop(lastDate,ln);
     h+='<td>'+fmtVal(v,KPI_TARGET)+' '+statusIcon(v,KPI_TARGET)+'</td>';
   });
   h+='<td class="kpi-target">'+KPI_TARGET+'분</td></tr>';
 
   // 주간 평균
+  var allWeekAvg=getAllEqAvgStopMulti(weekDates);
   h+='<tr><td><strong>주간 평균</strong> (최근 '+weekDates.length+'일)</td>';
+  h+='<td>'+fmtVal(allWeekAvg,KPI_TARGET)+' '+statusIcon(allWeekAvg,KPI_TARGET)+'</td>';
   lines.forEach(function(ln){
-    var v=getLineStopAvg(weekDates,ln);
+    var v=getLineEqAvgStopMulti(weekDates,ln);
     h+='<td>'+fmtVal(v,KPI_TARGET)+' '+statusIcon(v,KPI_TARGET)+'</td>';
   });
   h+='<td class="kpi-target">'+KPI_TARGET+'분</td></tr>';
 
   // 월간 평균
+  var allMonthAvg=getAllEqAvgStopMulti(monthDates);
   h+='<tr><td><strong>월간 평균</strong> (최근 '+monthDates.length+'일)</td>';
+  h+='<td>'+fmtVal(allMonthAvg,KPI_TARGET)+' '+statusIcon(allMonthAvg,KPI_TARGET)+'</td>';
   lines.forEach(function(ln){
-    var v=getLineStopAvg(monthDates,ln);
+    var v=getLineEqAvgStopMulti(monthDates,ln);
     h+='<td>'+fmtVal(v,KPI_TARGET)+' '+statusIcon(v,KPI_TARGET)+'</td>';
   });
   h+='<td class="kpi-target">'+KPI_TARGET+'분</td></tr>';
