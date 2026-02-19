@@ -259,19 +259,30 @@ function closeModal(){document.getElementById('modalOverlay').classList.remove('
 function showDayDetail(date,lineFilt){
   var rows=(D.allRows||[]).filter(function(r){return r.ds===date&&(!lineFilt||r.line===lineFilt)});
   if(!rows.length){closeModal();return}
-  rows.sort(function(a,b){return b.defect-a.defect||b.time-a.time});
-  var top10=rows.slice(0,10);
-  var totalDef=top10.reduce(function(s,r){return s+r.defect},0);
-  var totalTime=top10.reduce(function(s,r){return s+r.time},0);
-  var titleTxt=date+' Worst 10'+(lineFilt?' ('+lineFilt+' Line)':' (전체)')+' · 불량수량 내림차순';
+  var byDefect=rows.slice().sort(function(a,b){return b.defect-a.defect||b.time-a.time}).slice(0,5);
+  var byTime=rows.slice().sort(function(a,b){return b.time-a.time||b.defect-a.defect}).slice(0,5);
+  var titleTxt=date+' Worst 5'+(lineFilt?' ('+lineFilt+' Line)':' (전체)');
   document.getElementById('modalTitle').textContent=titleTxt;
-  var t='<table><thead><tr><th>#</th><th>설비</th><th>항목</th><th>상세조정내용</th><th>불량수량</th><th>시간(분)</th></tr></thead><tbody>';
-  top10.forEach(function(r,i){
+  var defTotalDef=byDefect.reduce(function(s,r){return s+r.defect},0);
+  var defTotalTime=byDefect.reduce(function(s,r){return s+r.time},0);
+  var timeTotalDef=byTime.reduce(function(s,r){return s+r.defect},0);
+  var timeTotalTime=byTime.reduce(function(s,r){return s+r.time},0);
+  var t='<div style="margin-bottom:14px"><div style="color:#ef4444;font-weight:700;font-size:13px;margin-bottom:6px">🔴 불량수량 기준 Top 5</div>';
+  t+='<table><thead><tr><th>#</th><th>설비</th><th>항목</th><th>상세조정내용</th><th>불량수량</th><th>시간(분)</th></tr></thead><tbody>';
+  byDefect.forEach(function(r,i){
     var defCls=i===0?' class="highlight"':'';
     t+='<tr><td>'+(i+1)+'</td><td>'+r.eq+'</td><td>'+r.sub+'</td><td>'+(r.detail||'-')+'</td><td'+defCls+'>'+Math.round(r.defect).toLocaleString()+'</td><td>'+Math.round(r.time).toLocaleString()+'</td></tr>';
   });
-  t+='<tr style="background:#1a1a1a;font-weight:700"><td></td><td>합계</td><td></td><td></td><td>'+Math.round(totalDef).toLocaleString()+'</td><td>'+Math.round(totalTime).toLocaleString()+'</td></tr>';
-  t+='</tbody></table>';
+  t+='<tr style="background:#1a1a1a;font-weight:700"><td></td><td>합계</td><td></td><td></td><td>'+Math.round(defTotalDef).toLocaleString()+'</td><td>'+Math.round(defTotalTime).toLocaleString()+'</td></tr>';
+  t+='</tbody></table></div>';
+  t+='<div><div style="color:#22c55e;font-weight:700;font-size:13px;margin-bottom:6px">🟢 정지시간 기준 Top 5</div>';
+  t+='<table><thead><tr><th>#</th><th>설비</th><th>항목</th><th>상세조정내용</th><th>불량수량</th><th>시간(분)</th></tr></thead><tbody>';
+  byTime.forEach(function(r,i){
+    var timeCls=i===0?' style="color:#22c55e;font-weight:700"':'';
+    t+='<tr><td>'+(i+1)+'</td><td>'+r.eq+'</td><td>'+r.sub+'</td><td>'+(r.detail||'-')+'</td><td>'+Math.round(r.defect).toLocaleString()+'</td><td'+timeCls+'>'+Math.round(r.time).toLocaleString()+'</td></tr>';
+  });
+  t+='<tr style="background:#1a1a1a;font-weight:700"><td></td><td>합계</td><td></td><td></td><td>'+Math.round(timeTotalDef).toLocaleString()+'</td><td>'+Math.round(timeTotalTime).toLocaleString()+'</td></tr>';
+  t+='</tbody></table></div>';
   document.getElementById('modalBody').innerHTML=t;
   document.getElementById('modalOverlay').classList.add('show');
 }
