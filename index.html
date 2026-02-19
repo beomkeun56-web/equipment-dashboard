@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>설비조정이력 분석 v2.2</title>
+<title>설비조정이력 분석 v2.3</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -84,7 +84,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd">
-<h1>📊 설비조정이력 분석 v2.2</h1>
+<h1>📊 설비조정이력 분석 v2.3</h1>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
 <div class="file-bar">
@@ -403,6 +403,25 @@ function buildStopTable(data){
   return h;
 }
 
+function buildStopTableWide(data){
+  var h='<div class="hc"><table class="ht"><thead><tr><th>구분</th>';
+  data.forEach(function(r){h+='<th>'+r['일자str']+'</th>'});
+  h+='<th style="background:#1e40af">합계</th></tr></thead><tbody>';
+  var ts=0;
+  h+='<tr><th style="color:#ef4444">⛔ 정지</th>';
+  data.forEach(function(r){var v=r.stop;ts+=v;h+='<td'+(v>0?' style="color:#ef4444;font-weight:700"':'')+'>'+v+'</td>'});
+  h+='<td style="background:#1e3a5f;font-weight:700;color:#ef4444">'+ts+'</td></tr>';
+  var tn=0;
+  h+='<tr><th style="color:#22c55e">✅ 비정지</th>';
+  data.forEach(function(r){var v=r.cnt-r.stop;tn+=v;h+='<td'+(v>0?' style="color:#22c55e;font-weight:700"':'')+'>'+v+'</td>'});
+  h+='<td style="background:#1e3a5f;font-weight:700;color:#22c55e">'+tn+'</td></tr>';
+  h+='<tr><th style="background:#1e40af;color:#fff">합계</th>';
+  data.forEach(function(r){h+='<td style="background:#1e3a5f;font-weight:700;color:#60a5fa">'+r.cnt+'</td>'});
+  h+='<td style="background:#1e40af;font-weight:700;color:#fcd34d">'+(ts+tn)+'</td></tr>';
+  h+='</tbody></table></div>';
+  return h;
+}
+
 function buildSummaryPage(){
   if(!D||!D.allRows||!D.all_dates||D.all_dates.length===0)return'<div style="padding:20px;color:#94a3b8">데이터가 부족합니다</div>';
   var KPI_TARGET=50;
@@ -686,7 +705,6 @@ function renderAll(){
   '<div class="pn on" id="summaryPanel">'+buildSummaryPage()+'</div>'+
   '<div class="pn">'+
     '<div class="bx"><h3>📅 전체 일자별 건수 / 불량수량 / 정지시간<em>Total '+D.totalRec.toLocaleString()+'건</em></h3><canvas id="dAll"></canvas></div>'+
-    '<div class="bx"><h3>📅 전체 정지 vs 비정지</h3><div id="tAllS"></div></div>'+
     '<hr style="border:1px solid #1a1a1a;margin:20px 0">'+
     '<div class="bx" style="border-left:3px solid #06b6d4"><h3><span class="line-label" style="background:#06b6d420;color:#06b6d4">G Line</span> 일자별 건수 / 불량 / 시간<em>'+((ls.G||{}).cnt||0).toLocaleString()+'건 · 설비 '+((ls.G||{}).eq||0)+'대</em></h3><canvas id="dG"></canvas></div>'+
     '<div class="bx" style="border-left:3px solid #06b6d4"><h3><span class="line-label" style="background:#06b6d420;color:#06b6d4">G Line</span> 정지 vs 비정지</h3><div id="tGS"></div></div>'+
@@ -696,6 +714,8 @@ function renderAll(){
     '<hr style="border:1px solid #1a1a1a;margin:20px 0">'+
     '<div class="bx" style="border-left:3px solid #f59e0b"><h3><span class="line-label" style="background:#f59e0b20;color:#f59e0b">K Line</span> 일자별 건수 / 불량 / 시간<em>'+((ls.K||{}).cnt||0).toLocaleString()+'건 · 설비 '+((ls.K||{}).eq||0)+'대</em></h3><canvas id="dK"></canvas></div>'+
     '<div class="bx" style="border-left:3px solid #f59e0b"><h3><span class="line-label" style="background:#f59e0b20;color:#f59e0b">K Line</span> 정지 vs 비정지</h3><div id="tKS"></div></div>'+
+    '<hr style="border:1px solid #1a1a1a;margin:20px 0">'+
+    '<div class="bx"><h3>📊 전체 정지 vs 비정지 종합</h3><div class="hc" id="tAllS"></div></div>'+
   '</div>'+
   '<div class="pn"><div class="bx"><h3>🔥 설비 일자별 불량수량</h3>'+legend+'<div class="hc" id="hm_def"></div></div></div>'+
   '<div class="pn"><div class="bx"><h3>🔥 설비 일자별 조정시간(분)</h3>'+legend+'<div class="hc" id="hm_time"></div></div></div>';
@@ -707,7 +727,7 @@ function renderAll(){
   [D.daily_G,D.daily_H,D.daily_K].forEach(function(ld){ld.forEach(function(r){if(r.cnt>fixedCnt){fixedCnt=Math.ceil(r.cnt/10)*10;exceeded=true}var mx=Math.max(Math.round(r.defect),Math.round(r.time));if(mx>fixedQty){fixedQty=Math.ceil(mx/1000)*1000;exceeded=true}})});
   if(exceeded){D.daily.forEach(function(r){if(r.cnt>fixedCnt)fixedCnt=Math.ceil(r.cnt/10)*10;var mx=Math.max(Math.round(r.defect),Math.round(r.time));if(mx>fixedQty)fixedQty=Math.ceil(mx/1000)*1000})}
   charts.push(makeDailyChart('dAll', D.daily, 'Total', '#3b82f6', null, exceeded?fixedCnt:null, exceeded?fixedQty:null));
-  document.getElementById('tAllS').innerHTML=buildStopTable(D.daily);
+  document.getElementById('tAllS').innerHTML=buildStopTableWide(D.daily);
   charts.push(makeDailyChart('dG', D.daily_G, 'G Line', '#06b6d4', 'G', fixedCnt, fixedQty));
   document.getElementById('tGS').innerHTML=buildStopTable(D.daily_G);
   charts.push(makeDailyChart('dH', D.daily_H, 'H Line', '#22c55e', 'H', fixedCnt, fixedQty));
