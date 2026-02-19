@@ -29,7 +29,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#000;color:#e2e8f0}
 .sum-tbl .bad{color:#ef4444;font-weight:700}
 .sum-tbl .kpi-target{color:#f59e0b;font-weight:600;font-size:11px}
 .worst-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-@media(max-width:700px){.worst-grid{grid-template-columns:1fr}}
+@media(max-width:700px){.worst-grid{grid-template-columns:1fr}.worst-grid-3{grid-template-columns:1fr!important}}
 .worst-card{background:#111;border-radius:10px;border:1px solid #1a1a1a;padding:12px}
 .worst-card h4{font-size:13px;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid #1a1a1a}
 .worst-tbl{border-collapse:collapse;width:100%;font-size:12px}
@@ -382,49 +382,139 @@ function buildSummaryPage(){
     return sum/dts.length;
   }
 
-  function fmtVal(v,target){
+  function fmtCell(v,target){
     var rounded=Math.round(v);
     var cls=rounded<=target?'good':'bad';
-    return'<span class="'+cls+'">'+rounded.toLocaleString()+'분</span>';
+    var rate=target>0?Math.round(v/target*100):0;
+    var rateCls=rate<=100?'good':'bad';
+    return'<span class="'+cls+'">'+rounded.toLocaleString()+'분</span><br><span style="font-size:10px" class="'+rateCls+'">('+rate+'%)</span>';
   }
-  function statusIcon(v,target){return v<=target?'<span style="color:#22c55e;font-size:16px">&#9679;</span>':'<span style="color:#ef4444;font-size:16px">&#9679;</span>'}
 
   // === Section 1: Stop Time KPI by Line (per-equipment average) ===
   var h='<div class="sum-section"><div class="bx"><h3>&#9201; 라인별 정지시간 KPI 현황 <em>목표: '+KPI_TARGET+'분/일 (설비별 평균)</em></h3>';
   h+='<table class="sum-tbl"><thead><tr><th>구분</th><th style="color:#60a5fa">전체</th>';
   lines.forEach(function(ln){h+='<th style="color:'+lineColors[ln]+'">'+ln+' Line</th>'});
-  h+='<th>KPI 목표</th></tr></thead><tbody>';
+  h+='</tr></thead><tbody>';
 
   // 전일
   var allDayAvg=getAllEqAvgStop(lastDate);
-  h+='<tr><td><strong>전일</strong> ('+lastDate+')</td>';
-  h+='<td>'+fmtVal(allDayAvg,KPI_TARGET)+' '+statusIcon(allDayAvg,KPI_TARGET)+'</td>';
+  h+='<tr><td>전일</td>';
+  h+='<td>'+fmtCell(allDayAvg,KPI_TARGET)+'</td>';
   lines.forEach(function(ln){
     var v=getLineEqAvgStop(lastDate,ln);
-    h+='<td>'+fmtVal(v,KPI_TARGET)+' '+statusIcon(v,KPI_TARGET)+'</td>';
+    h+='<td>'+fmtCell(v,KPI_TARGET)+'</td>';
   });
-  h+='<td class="kpi-target">'+KPI_TARGET+'분</td></tr>';
+  h+='</tr>';
 
-  // 주간 평균
+  // 주간
   var allWeekAvg=getAllEqAvgStopMulti(weekDates);
-  h+='<tr><td><strong>주간 평균</strong> (최근 '+weekDates.length+'일)</td>';
-  h+='<td>'+fmtVal(allWeekAvg,KPI_TARGET)+' '+statusIcon(allWeekAvg,KPI_TARGET)+'</td>';
+  h+='<tr><td>주간</td>';
+  h+='<td>'+fmtCell(allWeekAvg,KPI_TARGET)+'</td>';
   lines.forEach(function(ln){
     var v=getLineEqAvgStopMulti(weekDates,ln);
-    h+='<td>'+fmtVal(v,KPI_TARGET)+' '+statusIcon(v,KPI_TARGET)+'</td>';
+    h+='<td>'+fmtCell(v,KPI_TARGET)+'</td>';
   });
-  h+='<td class="kpi-target">'+KPI_TARGET+'분</td></tr>';
+  h+='</tr>';
 
-  // 월간 평균
+  // 월간
   var allMonthAvg=getAllEqAvgStopMulti(monthDates);
-  h+='<tr><td><strong>월간 평균</strong> (최근 '+monthDates.length+'일)</td>';
-  h+='<td>'+fmtVal(allMonthAvg,KPI_TARGET)+' '+statusIcon(allMonthAvg,KPI_TARGET)+'</td>';
+  h+='<tr><td>월간</td>';
+  h+='<td>'+fmtCell(allMonthAvg,KPI_TARGET)+'</td>';
   lines.forEach(function(ln){
     var v=getLineEqAvgStopMulti(monthDates,ln);
-    h+='<td>'+fmtVal(v,KPI_TARGET)+' '+statusIcon(v,KPI_TARGET)+'</td>';
+    h+='<td>'+fmtCell(v,KPI_TARGET)+'</td>';
   });
-  h+='<td class="kpi-target">'+KPI_TARGET+'분</td></tr>';
+  h+='</tr>';
   h+='</tbody></table></div></div>';
+
+  // === Section 1-2: Priority Management Equipment Analysis ===
+  // Find equipment with continuously increasing stop time (last 3+ days trend)
+  function getEqDailyTrend(eq,dts,field){
+    return dts.map(function(dt){
+      return D.allRows.filter(function(r){return r.eq===eq&&r.ds===dt}).reduce(function(s,r){return s+(field==='time'?(r.stop?r.time:0):r.defect)},0);
+    });
+  }
+  function isIncreasingTrend(arr){
+    if(arr.length<3)return false;
+    var last3=arr.slice(-3);
+    return last3[2]>last3[1]&&last3[1]>last3[0]&&last3[2]>0;
+  }
+
+  var recentDates=dates.slice(Math.max(0,dates.length-7));
+  var allEqs=Object.keys(D.allRows.reduce(function(m,r){m[r.eq]=1;return m},{}));
+
+  // Equipment with increasing stop time
+  var incTimeEqs=[];
+  allEqs.forEach(function(eq){
+    var trend=getEqDailyTrend(eq,recentDates,'time');
+    if(isIncreasingTrend(trend)){
+      var last=trend[trend.length-1];
+      var subs=D.allRows.filter(function(r){return r.eq===eq&&r.ds===lastDate});
+      var subMap={};subs.forEach(function(r){var k=r.sub||'기타';subMap[k]=(subMap[k]||0)+1});
+      var topSub=Object.keys(subMap).sort(function(a,b){return subMap[b]-subMap[a]})[0]||'-';
+      incTimeEqs.push({eq:eq,val:last,trend:trend.slice(-3),sub:topSub});
+    }
+  });
+  incTimeEqs.sort(function(a,b){return b.val-a.val});
+
+  // Equipment with increasing defect count
+  var incDefEqs=[];
+  allEqs.forEach(function(eq){
+    var trend=getEqDailyTrend(eq,recentDates,'defect');
+    if(isIncreasingTrend(trend)){
+      var last=trend[trend.length-1];
+      var subs=D.allRows.filter(function(r){return r.eq===eq&&r.ds===lastDate});
+      var subMap={};subs.forEach(function(r){var k=r.sub||'기타';subMap[k]=(subMap[k]||0)+1});
+      var topSub=Object.keys(subMap).sort(function(a,b){return subMap[b]-subMap[a]})[0]||'-';
+      incDefEqs.push({eq:eq,val:last,trend:trend.slice(-3),sub:topSub});
+    }
+  });
+  incDefEqs.sort(function(a,b){return b.val-a.val});
+
+  // Priority management: union of both + top frequent equipment
+  var prioritySet={};
+  incTimeEqs.slice(0,5).forEach(function(x){prioritySet[x.eq]={eq:x.eq,reason:'정지시간 연속증가',timeT:x.trend,sub:x.sub}});
+  incDefEqs.slice(0,5).forEach(function(x){
+    if(prioritySet[x.eq]){prioritySet[x.eq].reason='정지시간+불량 동시 증가'}
+    else{prioritySet[x.eq]={eq:x.eq,reason:'불량수량 연속증가',defT:x.trend,sub:x.sub}}
+  });
+  var priorityList=Object.keys(prioritySet).map(function(k){return prioritySet[k]}).slice(0,5);
+
+  h+='<div class="sum-section"><div class="bx"><h3>&#9888; 중점관리대상 설비 분석 <em>최근 7일 추세 기반</em></h3>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">';
+
+  // Col 1: Stop time increasing
+  h+='<div class="worst-card"><h4 style="color:#f59e0b;font-size:12px">&#8593; 정지시간 연속증가</h4>';
+  h+='<table class="worst-tbl"><thead><tr><th>설비</th><th>추세(최근3일)</th><th>항목</th></tr></thead><tbody>';
+  if(incTimeEqs.length){
+    incTimeEqs.slice(0,5).forEach(function(item){
+      h+='<tr><td>'+item.eq+'</td><td style="font-size:10px;color:#f59e0b">'+item.trend.map(function(v){return Math.round(v)}).join(' → ')+'분</td><td style="font-size:10px">'+item.sub+'</td></tr>';
+    });
+  }else{h+='<tr><td colspan="3" style="color:#22c55e;font-size:11px">해당 설비 없음</td></tr>'}
+  h+='</tbody></table></div>';
+
+  // Col 2: Defect increasing
+  h+='<div class="worst-card"><h4 style="color:#ef4444;font-size:12px">&#8593; 불량수량 연속증가</h4>';
+  h+='<table class="worst-tbl"><thead><tr><th>설비</th><th>추세(최근3일)</th><th>항목</th></tr></thead><tbody>';
+  if(incDefEqs.length){
+    incDefEqs.slice(0,5).forEach(function(item){
+      h+='<tr><td>'+item.eq+'</td><td style="font-size:10px;color:#ef4444">'+item.trend.map(function(v){return Math.round(v)}).join(' → ')+'</td><td style="font-size:10px">'+item.sub+'</td></tr>';
+    });
+  }else{h+='<tr><td colspan="3" style="color:#22c55e;font-size:11px">해당 설비 없음</td></tr>'}
+  h+='</tbody></table></div>';
+
+  // Col 3: Priority management summary
+  h+='<div class="worst-card"><h4 style="color:#a855f7;font-size:12px">&#9733; 중점관리 대상</h4>';
+  h+='<table class="worst-tbl"><thead><tr><th>설비</th><th>사유</th><th>항목</th></tr></thead><tbody>';
+  if(priorityList.length){
+    priorityList.forEach(function(item){
+      var reasonColor=item.reason.indexOf('동시')>=0?'#ef4444':'#f59e0b';
+      h+='<tr><td>'+item.eq+'</td><td style="font-size:10px;color:'+reasonColor+'">'+item.reason+'</td><td style="font-size:10px">'+(item.sub||'-')+'</td></tr>';
+    });
+  }else{h+='<tr><td colspan="3" style="color:#22c55e;font-size:11px">해당 설비 없음</td></tr>'}
+  h+='</tbody></table></div>';
+
+  h+='</div></div></div>';
 
   // === Section 2: Previous day Worst 5 - Combined Time + Defect + Adjustment Items ===
   var prevRows=D.allRows.filter(function(r){return r.ds===lastDate});
