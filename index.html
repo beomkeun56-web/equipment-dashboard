@@ -385,9 +385,7 @@ function buildSummaryPage(){
   function fmtCell(v,target){
     var rounded=Math.round(v);
     var cls=rounded<=target?'good':'bad';
-    var rate=target>0?Math.round(v/target*100):0;
-    var rateCls=rate<=100?'good':'bad';
-    return'<span class="'+cls+'">'+rounded.toLocaleString()+'분</span><br><span style="font-size:10px" class="'+rateCls+'">('+rate+'%)</span>';
+    return'<span class="'+cls+'">'+rounded.toLocaleString()+'분</span>';
   }
 
   // === Section 1: Stop Time KPI by Line (per-equipment average) ===
@@ -427,93 +425,60 @@ function buildSummaryPage(){
   h+='</tr>';
   h+='</tbody></table></div></div>';
 
-  // === Section 1-2: Priority Management Equipment Analysis ===
-  // Find equipment with continuously increasing stop time (last 3+ days trend)
-  function getEqDailyTrend(eq,dts,field){
-    return dts.map(function(dt){
-      return D.allRows.filter(function(r){return r.eq===eq&&r.ds===dt}).reduce(function(s,r){return s+(field==='time'?(r.stop?r.time:0):r.defect)},0);
-    });
-  }
-  function isIncreasingTrend(arr){
-    if(arr.length<3)return false;
-    var last3=arr.slice(-3);
-    return last3[2]>last3[1]&&last3[1]>last3[0]&&last3[2]>0;
-  }
-
+  // === Section 1-2: Persistent Problem Equipment (Top 3) ===
+  // Find equipment with consistently high stop time + defect over 7+ days
   var recentDates=dates.slice(Math.max(0,dates.length-7));
   var allEqs=Object.keys(D.allRows.reduce(function(m,r){m[r.eq]=1;return m},{}));
 
-  // Equipment with increasing stop time
-  var incTimeEqs=[];
+  var eqScores=[];
   allEqs.forEach(function(eq){
-    var trend=getEqDailyTrend(eq,recentDates,'time');
-    if(isIncreasingTrend(trend)){
-      var last=trend[trend.length-1];
-      var subs=D.allRows.filter(function(r){return r.eq===eq&&r.ds===lastDate});
-      var subMap={};subs.forEach(function(r){var k=r.sub||'기타';subMap[k]=(subMap[k]||0)+1});
-      var topSub=Object.keys(subMap).sort(function(a,b){return subMap[b]-subMap[a]})[0]||'-';
-      incTimeEqs.push({eq:eq,val:last,trend:trend.slice(-3),sub:topSub});
-    }
+    var dailyTime=recentDates.map(function(dt){
+      return D.allRows.filter(function(r){return r.eq===eq&&r.ds===dt&&r.stop}).reduce(function(s,r){return s+r.time},0);
+    });
+    var dailyDef=recentDates.map(function(dt){
+      return D.allRows.filter(function(r){return r.eq===eq&&r.ds===dt}).reduce(function(s,r){return s+r.defect},0);
+    });
+    // Count days with non-zero stop time
+    var activeDays=dailyTime.filter(function(v){return v>0}).length;
+    if(activeDays<Math.min(3,recentDates.length))return; // at least 3 days active
+    var avgTime=dailyTime.reduce(function(a,b){return a+b},0)/recentDates.length;
+    var avgDef=dailyDef.reduce(function(a,b){return a+b},0)/recentDates.length;
+    var totalTime=dailyTime.reduce(function(a,b){return a+b},0);
+    var totalDef=dailyDef.reduce(function(a,b){return a+b},0);
+    // Get top adjustment items
+    var subMap={};
+    D.allRows.filter(function(r){return r.eq===eq&&recentDates.indexOf(r.ds)>=0}).forEach(function(r){
+      var k=r.sub||'기타';subMap[k]=(subMap[k]||0)+1;
+    });
+    var topSubs=Object.keys(subMap).sort(function(a,b){return subMap[b]-subMap[a]}).slice(0,3).map(function(k){return k+'('+subMap[k]+')'}).join(', ');
+    eqScores.push({eq:eq,activeDays:activeDays,avgTime:avgTime,avgDef:avgDef,totalTime:totalTime,totalDef:totalDef,dailyTime:dailyTime,dailyDef:dailyDef,topSubs:topSubs});
   });
-  incTimeEqs.sort(function(a,b){return b.val-a.val});
+  // Sort by combined score: total stop time + total defect (both high = problem)
+  eqScores.sort(function(a,b){return(b.totalTime+b.totalDef)-(a.totalTime+a.totalDef)});
+  var top3=eqScores.slice(0,3);
 
-  // Equipment with increasing defect count
-  var incDefEqs=[];
-  allEqs.forEach(function(eq){
-    var trend=getEqDailyTrend(eq,recentDates,'defect');
-    if(isIncreasingTrend(trend)){
-      var last=trend[trend.length-1];
-      var subs=D.allRows.filter(function(r){return r.eq===eq&&r.ds===lastDate});
-      var subMap={};subs.forEach(function(r){var k=r.sub||'기타';subMap[k]=(subMap[k]||0)+1});
-      var topSub=Object.keys(subMap).sort(function(a,b){return subMap[b]-subMap[a]})[0]||'-';
-      incDefEqs.push({eq:eq,val:last,trend:trend.slice(-3),sub:topSub});
-    }
-  });
-  incDefEqs.sort(function(a,b){return b.val-a.val});
-
-  // Priority management: union of both + top frequent equipment
-  var prioritySet={};
-  incTimeEqs.slice(0,5).forEach(function(x){prioritySet[x.eq]={eq:x.eq,reason:'정지시간 연속증가',timeT:x.trend,sub:x.sub}});
-  incDefEqs.slice(0,5).forEach(function(x){
-    if(prioritySet[x.eq]){prioritySet[x.eq].reason='정지시간+불량 동시 증가'}
-    else{prioritySet[x.eq]={eq:x.eq,reason:'불량수량 연속증가',defT:x.trend,sub:x.sub}}
-  });
-  var priorityList=Object.keys(prioritySet).map(function(k){return prioritySet[k]}).slice(0,5);
-
-  h+='<div class="sum-section"><div class="bx"><h3>&#9888; 중점관리대상 설비 분석 <em>최근 7일 추세 기반</em></h3>';
+  h+='<div class="sum-section"><div class="bx"><h3>&#9888; 문제설비 TOP 3 <em>최근 '+recentDates.length+'일간 정지시간+불량 지속 높은 설비</em></h3>';
   h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">';
-
-  // Col 1: Stop time increasing
-  h+='<div class="worst-card"><h4 style="color:#f59e0b;font-size:12px">&#8593; 정지시간 연속증가</h4>';
-  h+='<table class="worst-tbl"><thead><tr><th>설비</th><th>추세(최근3일)</th><th>항목</th></tr></thead><tbody>';
-  if(incTimeEqs.length){
-    incTimeEqs.slice(0,5).forEach(function(item){
-      h+='<tr><td>'+item.eq+'</td><td style="font-size:10px;color:#f59e0b">'+item.trend.map(function(v){return Math.round(v)}).join(' → ')+'분</td><td style="font-size:10px">'+item.sub+'</td></tr>';
+  if(top3.length){
+    top3.forEach(function(item,idx){
+      var colors=['#ef4444','#f59e0b','#a855f7'];
+      var medals=['1st','2nd','3rd'];
+      h+='<div class="worst-card" style="border-color:'+colors[idx]+'">';
+      h+='<h4 style="color:'+colors[idx]+';font-size:13px;text-align:center">'+medals[idx]+' '+item.eq+'</h4>';
+      h+='<table class="worst-tbl">';
+      h+='<tr><th style="width:40%">주간 정지시간</th><td style="color:#f59e0b;font-weight:700">'+Math.round(item.totalTime).toLocaleString()+'분</td></tr>';
+      h+='<tr><th>일평균 정지</th><td>'+Math.round(item.avgTime).toLocaleString()+'분/일</td></tr>';
+      h+='<tr><th>주간 불량수량</th><td style="color:#ef4444;font-weight:700">'+Math.round(item.totalDef).toLocaleString()+'</td></tr>';
+      h+='<tr><th>일평균 불량</th><td>'+Math.round(item.avgDef).toLocaleString()+'/일</td></tr>';
+      h+='<tr><th>발생일수</th><td>'+item.activeDays+'/'+recentDates.length+'일</td></tr>';
+      h+='<tr><th>일별 정지추세</th><td style="font-size:10px;color:#94a3b8">'+item.dailyTime.map(function(v){return Math.round(v)}).join('→')+'</td></tr>';
+      h+='</table>';
+      h+='<div style="margin-top:8px;font-size:11px;color:#94a3b8;border-top:1px solid #1a1a1a;padding-top:6px"><span style="color:#60a5fa;font-weight:600">주요항목:</span> '+item.topSubs+'</div>';
+      h+='</div>';
     });
-  }else{h+='<tr><td colspan="3" style="color:#22c55e;font-size:11px">해당 설비 없음</td></tr>'}
-  h+='</tbody></table></div>';
-
-  // Col 2: Defect increasing
-  h+='<div class="worst-card"><h4 style="color:#ef4444;font-size:12px">&#8593; 불량수량 연속증가</h4>';
-  h+='<table class="worst-tbl"><thead><tr><th>설비</th><th>추세(최근3일)</th><th>항목</th></tr></thead><tbody>';
-  if(incDefEqs.length){
-    incDefEqs.slice(0,5).forEach(function(item){
-      h+='<tr><td>'+item.eq+'</td><td style="font-size:10px;color:#ef4444">'+item.trend.map(function(v){return Math.round(v)}).join(' → ')+'</td><td style="font-size:10px">'+item.sub+'</td></tr>';
-    });
-  }else{h+='<tr><td colspan="3" style="color:#22c55e;font-size:11px">해당 설비 없음</td></tr>'}
-  h+='</tbody></table></div>';
-
-  // Col 3: Priority management summary
-  h+='<div class="worst-card"><h4 style="color:#a855f7;font-size:12px">&#9733; 중점관리 대상</h4>';
-  h+='<table class="worst-tbl"><thead><tr><th>설비</th><th>사유</th><th>항목</th></tr></thead><tbody>';
-  if(priorityList.length){
-    priorityList.forEach(function(item){
-      var reasonColor=item.reason.indexOf('동시')>=0?'#ef4444':'#f59e0b';
-      h+='<tr><td>'+item.eq+'</td><td style="font-size:10px;color:'+reasonColor+'">'+item.reason+'</td><td style="font-size:10px">'+(item.sub||'-')+'</td></tr>';
-    });
-  }else{h+='<tr><td colspan="3" style="color:#22c55e;font-size:11px">해당 설비 없음</td></tr>'}
-  h+='</tbody></table></div>';
-
+  }else{
+    h+='<div class="worst-card" style="grid-column:1/-1;text-align:center;color:#22c55e;padding:20px">해당 설비 없음</div>';
+  }
   h+='</div></div></div>';
 
   // === Section 2: Previous day Worst 5 - Combined Time + Defect + Adjustment Items ===
