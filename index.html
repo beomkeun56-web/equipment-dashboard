@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>설비조정이력 분석 v2.3</title>
+<title>설비조정이력 분석 v2.4</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -84,7 +84,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd">
-<h1>📊 설비조정이력 분석 v2.3</h1>
+<h1>📊 설비조정이력 분석 v2.4</h1>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
 <div class="file-bar">
@@ -729,11 +729,11 @@ function renderAll(){
   charts.push(makeDailyChart('dAll', D.daily, 'Total', '#3b82f6', null, exceeded?fixedCnt:null, exceeded?fixedQty:null));
   document.getElementById('tAllS').innerHTML=buildStopTableWide(D.daily);
   charts.push(makeDailyChart('dG', D.daily_G, 'G Line', '#06b6d4', 'G', fixedCnt, fixedQty));
-  document.getElementById('tGS').innerHTML=buildStopTable(D.daily_G);
+  document.getElementById('tGS').innerHTML=buildStopTableWide(D.daily_G);
   charts.push(makeDailyChart('dH', D.daily_H, 'H Line', '#22c55e', 'H', fixedCnt, fixedQty));
-  document.getElementById('tHS').innerHTML=buildStopTable(D.daily_H);
+  document.getElementById('tHS').innerHTML=buildStopTableWide(D.daily_H);
   charts.push(makeDailyChart('dK', D.daily_K, 'K Line', '#f59e0b', 'K', fixedCnt, fixedQty));
-  document.getElementById('tKS').innerHTML=buildStopTable(D.daily_K);
+  document.getElementById('tKS').innerHTML=buildStopTableWide(D.daily_K);
 
   document.getElementById('hm_def').innerHTML=buildDailyHT(D.hm_def,'불량수량',D.eq_order,D.all_dates);
   document.getElementById('hm_time').innerHTML=buildDailyHT(D.hm_time,'time',D.eq_order,D.all_dates);
