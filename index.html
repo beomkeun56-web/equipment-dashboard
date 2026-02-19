@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>설비조정이력 분석 v2.1</title>
+<title>설비조정이력 분석 v2.2</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -84,7 +84,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd">
-<h1>📊 설비조정이력 분석 v2.1</h1>
+<h1>📊 설비조정이력 분석 v2.2</h1>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
 <div class="file-bar">
@@ -355,7 +355,7 @@ function showDayDetail(date,lineFilt){
   document.getElementById('modalOverlay').classList.add('show');
 }
 
-function makeDailyChart(canvasId, data, title, barColor, lineFilt){
+function makeDailyChart(canvasId, data, title, barColor, lineFilt, yMax, y1Max){
   // Compute unique equipment count per date
   var eqCntByDate={};
   data.forEach(function(r){
@@ -373,8 +373,8 @@ function makeDailyChart(canvasId, data, title, barColor, lineFilt){
     if(!els.length)return;var idx=els[0].index;var date=data[idx]['일자str'];showDayDetail(date,lineFilt||null);
   },plugins:{legend:{labels:{color:'#94a3b8',font:{size:10}}},tooltip:{backgroundColor:'#0a0a0a',titleColor:'#60a5fa',bodyColor:'#e2e8f0',callbacks:{title:function(items){if(!items.length)return'';var idx=items[0].dataIndex;return data[idx]['일자str']+' ('+( eqCntByDate[data[idx]['일자str']]||0)+'대)'},label:function(c){return c.dataset.label+': '+c.parsed.y.toLocaleString()}}}},scales:{
     x:{ticks:{color:'#94a3b8',font:{size:10},callback:function(val,idx){var lb=this.getLabelForValue(idx);if(Array.isArray(lb))return lb;return[lb]}},grid:{color:'#1a1a1a'}},
-    y:{position:'left',ticks:{color:barColor,callback:function(v){return v.toLocaleString()}},grid:{color:'#1a1a1a'},title:{display:true,text:'건수',color:barColor,font:{size:10}}},
-    y1:{position:'right',ticks:{color:'#ef4444',font:{size:9},callback:function(v){return v.toLocaleString()}},grid:{drawOnChartArea:false},title:{display:true,text:'불량/시간',color:'#ef4444',font:{size:10}}}
+    y:{position:'left',ticks:{color:barColor,callback:function(v){return v.toLocaleString()}},grid:{color:'#1a1a1a'},title:{display:true,text:'건수',color:barColor,font:{size:10}},beginAtZero:true,max:yMax||undefined},
+    y1:{position:'right',ticks:{color:'#ef4444',font:{size:9},callback:function(v){return v.toLocaleString()}},grid:{drawOnChartArea:false},title:{display:true,text:'불량/시간',color:'#ef4444',font:{size:10}},beginAtZero:true,max:y1Max||undefined}
   }}});
   return ch;
 }
@@ -387,6 +387,20 @@ function makeStopChart(canvasId, data, barColorStop, barColorNon){
     x:{stacked:true,ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'#1a1a1a'}},
     y:{stacked:true,ticks:{color:'#94a3b8',callback:function(v){return v.toLocaleString()}},grid:{color:'#1a1a1a'}}
   }}});
+}
+
+function buildStopTable(data){
+  var ts=0,tn=0;
+  var h='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+  h+='<div style="max-height:400px;overflow-y:auto"><table class="worst-tbl"><thead><tr><th colspan="2" style="color:#ef4444">⛔ 정지</th></tr><tr><th>일자</th><th>건수</th></tr></thead><tbody>';
+  data.forEach(function(r){var v=r.stop;ts+=v;h+='<tr><td>'+r['일자str']+'</td><td'+(v>0?' style="color:#ef4444;font-weight:700"':'')+'>'+v+'</td></tr>'});
+  h+='<tr style="background:#1e40af"><td style="font-weight:700;color:#fff">합계</td><td style="font-weight:700;color:#ef4444">'+ts+'</td></tr>';
+  h+='</tbody></table></div>';
+  h+='<div style="max-height:400px;overflow-y:auto"><table class="worst-tbl"><thead><tr><th colspan="2" style="color:#22c55e">✅ 비정지</th></tr><tr><th>일자</th><th>건수</th></tr></thead><tbody>';
+  data.forEach(function(r){var v=r.cnt-r.stop;tn+=v;h+='<tr><td>'+r['일자str']+'</td><td'+(v>0?' style="color:#22c55e;font-weight:700"':'')+'>'+v+'</td></tr>'});
+  h+='<tr style="background:#1e40af"><td style="font-weight:700;color:#fff">합계</td><td style="font-weight:700;color:#22c55e">'+tn+'</td></tr>';
+  h+='</tbody></table></div></div>';
+  return h;
 }
 
 function buildSummaryPage(){
@@ -672,16 +686,16 @@ function renderAll(){
   '<div class="pn on" id="summaryPanel">'+buildSummaryPage()+'</div>'+
   '<div class="pn">'+
     '<div class="bx"><h3>📅 전체 일자별 건수 / 불량수량 / 정지시간<em>Total '+D.totalRec.toLocaleString()+'건</em></h3><canvas id="dAll"></canvas></div>'+
-    '<div class="bx"><h3>📅 전체 정지 vs 비정지<em>Stacked</em></h3><canvas id="dAllS"></canvas></div>'+
+    '<div class="bx"><h3>📅 전체 정지 vs 비정지</h3><div id="tAllS"></div></div>'+
     '<hr style="border:1px solid #1a1a1a;margin:20px 0">'+
     '<div class="bx" style="border-left:3px solid #06b6d4"><h3><span class="line-label" style="background:#06b6d420;color:#06b6d4">G Line</span> 일자별 건수 / 불량 / 시간<em>'+((ls.G||{}).cnt||0).toLocaleString()+'건 · 설비 '+((ls.G||{}).eq||0)+'대</em></h3><canvas id="dG"></canvas></div>'+
-    '<div class="bx" style="border-left:3px solid #06b6d4"><h3><span class="line-label" style="background:#06b6d420;color:#06b6d4">G Line</span> 정지 vs 비정지</h3><canvas id="dGS"></canvas></div>'+
+    '<div class="bx" style="border-left:3px solid #06b6d4"><h3><span class="line-label" style="background:#06b6d420;color:#06b6d4">G Line</span> 정지 vs 비정지</h3><div id="tGS"></div></div>'+
     '<hr style="border:1px solid #1a1a1a;margin:20px 0">'+
     '<div class="bx" style="border-left:3px solid #22c55e"><h3><span class="line-label" style="background:#22c55e20;color:#22c55e">H Line</span> 일자별 건수 / 불량 / 시간<em>'+((ls.H||{}).cnt||0).toLocaleString()+'건 · 설비 '+((ls.H||{}).eq||0)+'대</em></h3><canvas id="dH"></canvas></div>'+
-    '<div class="bx" style="border-left:3px solid #22c55e"><h3><span class="line-label" style="background:#22c55e20;color:#22c55e">H Line</span> 정지 vs 비정지</h3><canvas id="dHS"></canvas></div>'+
+    '<div class="bx" style="border-left:3px solid #22c55e"><h3><span class="line-label" style="background:#22c55e20;color:#22c55e">H Line</span> 정지 vs 비정지</h3><div id="tHS"></div></div>'+
     '<hr style="border:1px solid #1a1a1a;margin:20px 0">'+
     '<div class="bx" style="border-left:3px solid #f59e0b"><h3><span class="line-label" style="background:#f59e0b20;color:#f59e0b">K Line</span> 일자별 건수 / 불량 / 시간<em>'+((ls.K||{}).cnt||0).toLocaleString()+'건 · 설비 '+((ls.K||{}).eq||0)+'대</em></h3><canvas id="dK"></canvas></div>'+
-    '<div class="bx" style="border-left:3px solid #f59e0b"><h3><span class="line-label" style="background:#f59e0b20;color:#f59e0b">K Line</span> 정지 vs 비정지</h3><canvas id="dKS"></canvas></div>'+
+    '<div class="bx" style="border-left:3px solid #f59e0b"><h3><span class="line-label" style="background:#f59e0b20;color:#f59e0b">K Line</span> 정지 vs 비정지</h3><div id="tKS"></div></div>'+
   '</div>'+
   '<div class="pn"><div class="bx"><h3>🔥 설비 일자별 불량수량</h3>'+legend+'<div class="hc" id="hm_def"></div></div></div>'+
   '<div class="pn"><div class="bx"><h3>🔥 설비 일자별 조정시간(분)</h3>'+legend+'<div class="hc" id="hm_time"></div></div></div>';
@@ -689,14 +703,17 @@ function renderAll(){
   // Render summary chart
   renderWorstWeekChart();
 
-  charts.push(makeDailyChart('dAll', D.daily, 'Total', '#3b82f6', null));
-  charts.push(makeStopChart('dAllS', D.daily, '#ef4444', '#22c55e'));
-  charts.push(makeDailyChart('dG', D.daily_G, 'G Line', '#06b6d4', 'G'));
-  charts.push(makeStopChart('dGS', D.daily_G, '#ef4444', '#06b6d4'));
-  charts.push(makeDailyChart('dH', D.daily_H, 'H Line', '#22c55e', 'H'));
-  charts.push(makeStopChart('dHS', D.daily_H, '#ef4444', '#22c55e'));
-  charts.push(makeDailyChart('dK', D.daily_K, 'K Line', '#f59e0b', 'K'));
-  charts.push(makeStopChart('dKS', D.daily_K, '#ef4444', '#f59e0b'));
+  var fixedCnt=120,fixedQty=10000,exceeded=false;
+  [D.daily_G,D.daily_H,D.daily_K].forEach(function(ld){ld.forEach(function(r){if(r.cnt>fixedCnt){fixedCnt=Math.ceil(r.cnt/10)*10;exceeded=true}var mx=Math.max(Math.round(r.defect),Math.round(r.time));if(mx>fixedQty){fixedQty=Math.ceil(mx/1000)*1000;exceeded=true}})});
+  if(exceeded){D.daily.forEach(function(r){if(r.cnt>fixedCnt)fixedCnt=Math.ceil(r.cnt/10)*10;var mx=Math.max(Math.round(r.defect),Math.round(r.time));if(mx>fixedQty)fixedQty=Math.ceil(mx/1000)*1000})}
+  charts.push(makeDailyChart('dAll', D.daily, 'Total', '#3b82f6', null, exceeded?fixedCnt:null, exceeded?fixedQty:null));
+  document.getElementById('tAllS').innerHTML=buildStopTable(D.daily);
+  charts.push(makeDailyChart('dG', D.daily_G, 'G Line', '#06b6d4', 'G', fixedCnt, fixedQty));
+  document.getElementById('tGS').innerHTML=buildStopTable(D.daily_G);
+  charts.push(makeDailyChart('dH', D.daily_H, 'H Line', '#22c55e', 'H', fixedCnt, fixedQty));
+  document.getElementById('tHS').innerHTML=buildStopTable(D.daily_H);
+  charts.push(makeDailyChart('dK', D.daily_K, 'K Line', '#f59e0b', 'K', fixedCnt, fixedQty));
+  document.getElementById('tKS').innerHTML=buildStopTable(D.daily_K);
 
   document.getElementById('hm_def').innerHTML=buildDailyHT(D.hm_def,'불량수량',D.eq_order,D.all_dates);
   document.getElementById('hm_time').innerHTML=buildDailyHT(D.hm_time,'time',D.eq_order,D.all_dates);
