@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v7.4</title>
+<title>Production Performance v7.5</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v7.4</h1>
+<h1>📊 Production Performance v7.5</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -398,7 +398,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='7.4'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='7.5'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -487,6 +487,7 @@ function processWorkbook(wb){
   var lossByLineDate={},lossAccumByLine={},lossDates=[];
   var _lossDbg={sheets:[],found:'없음',rows:0,sample:''};
   var stopByDateEq={};
+  var kpiStopByDateEq={}; // KPI용: PM调整만, 停机/开机 제외, col20 정지시간
   // === 시트 분류: 이름으로 먼저 판별하여 필요한 시트만 파싱 ===
   var _adjSheets=[],_niboSheets=[],_lossSheet='';
   for(var si=0;si<wb.SheetNames.length;si++){
@@ -527,6 +528,14 @@ function processWorkbook(wb){
       var line=eq[0];
       var detail=(r[15]||'').toString().trim();
       allRows.push({ds:ds,eq:eq,sub:sub,detail:detail,defect:defect,time:time,stop:stopYN==='停',line:line,dateStr:dateStr});
+      // KPI용 정지시간: PM调整 + 停机/开机 제외 + 停 행만 + col20 시간
+      if(stopYN==='停'){
+        var kpiSm=typeof r[20]==='number'?r[20]:(parseFloat(r[20])||0);
+        if(kpiSm>0){
+          if(!kpiStopByDateEq[dateStr])kpiStopByDateEq[dateStr]={};
+          kpiStopByDateEq[dateStr][eq]=(kpiStopByDateEq[dateStr][eq]||0)+kpiSm;
+        }
+      }
     }
   }
   // === 日别汇总: 이름매칭 → 바로 파싱 ===
@@ -577,7 +586,7 @@ function processWorkbook(wb){
       line_equips:{G:[],H:[],K:[]},hm_def:[],hm_time:[],allRows:[],
       totalRec:0,totalDef:0,totalTime:0,stopCnt:0,eqCnt:0,
       dateRange:t('noData'),lineSummary:{G:{cnt:0,eq:0},H:{cnt:0,eq:0},K:{cnt:0,eq:0}},
-      prodByDateEq:{},stopByDateEq:{},avgEqST:{},stDates:[],
+      prodByDateEq:{},stopByDateEq:{},kpiStopByDateEq:{},avgEqST:{},stDates:[],
       prodByWeekEq:{},stopByWeekEq:{},weekList:[],
       prodTotalEq:{},stopTotalEq:{},eqDates:{},eqWeekDates:{},
       lossByLineDate:lossByLineDate,lossAccumByLine:lossAccumByLine,lossDates:lossDates,
@@ -804,7 +813,7 @@ function processWorkbook(wb){
     eqCnt:eq_order.length,
     dateRange:all_dates[0]+' ~ '+all_dates[all_dates.length-1],
     lineSummary:lineSummary,
-    prodByDateEq:prodByDateEq,stopByDateEq:stopByDateEq,avgEqST:avgEqST,stDates:stDates,
+    prodByDateEq:prodByDateEq,stopByDateEq:stopByDateEq,kpiStopByDateEq:kpiStopByDateEq,avgEqST:avgEqST,stDates:stDates,
     prodByWeekEq:prodByWeekEq,stopByWeekEq:stopByWeekEq,weekList:weekList,
     prodTotalEq:prodTotalEq,stopTotalEq:stopTotalEq,eqDates:eqDates,eqWeekDates:eqWeekDates,
     lossByLineDate:lossByLineDate,lossAccumByLine:lossAccumByLine,lossDates:lossDates,
@@ -1030,10 +1039,10 @@ function buildSummaryPage(){
   // ds→fullDate 매핑 (02/13 → 2026-02-13)
   var _dsToFull={};
   D.allRows.forEach(function(r){if(r.ds&&r.dateStr&&!_dsToFull[r.ds])_dsToFull[r.ds]=r.dateStr;});
-  // stopByDateEq 기반 정지시간 계산 (전체 정지 데이터 사용)
+  // kpiStopByDateEq 기반 정지시간 계산 (PM调整만, 停机/开机 제외, col20)
   function getLineEqAvgStop(dt,line){
     var fd=_dsToFull[dt];if(!fd)return 0;
-    var stops=(D.stopByDateEq||{})[fd];if(!stops)return 0;
+    var stops=(D.kpiStopByDateEq||{})[fd];if(!stops)return 0;
     var eqs=Object.keys(stops).filter(function(eq){return eq[0]===line&&stops[eq]>0;});
     if(!eqs.length)return 0;
     var total=eqs.reduce(function(s,eq){return s+stops[eq]},0);
@@ -1047,7 +1056,7 @@ function buildSummaryPage(){
   }
   function getAllEqAvgStop(dt){
     var fd=_dsToFull[dt];if(!fd)return 0;
-    var stops=(D.stopByDateEq||{})[fd];if(!stops)return 0;
+    var stops=(D.kpiStopByDateEq||{})[fd];if(!stops)return 0;
     var eqs=Object.keys(stops).filter(function(eq){return stops[eq]>0;});
     if(!eqs.length)return 0;
     var total=eqs.reduce(function(s,eq){return s+stops[eq]},0);
