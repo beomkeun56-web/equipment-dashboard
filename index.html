@@ -184,10 +184,15 @@ function processWorkbook(wb){
   var _dbgAllSheets=wb.SheetNames.slice();
   // === 일간 LOSS 현황 (日별汇總) - allRows 체크 전에 먼저 읽기 ===
   var lossByLineDate={},lossAccumByLine={},lossDates=[];
+  console.log('[LOSS] 전체 시트:', wb.SheetNames);
   for(var xi=0;xi<wb.SheetNames.length;xi++){
     var xsn=wb.SheetNames[xi];
+    var xsnHex=Array.from(xsn).map(function(c){return'U+'+c.charCodeAt(0).toString(16).toUpperCase()}).join(' ');
+    console.log('[LOSS] 시트 체크:', xsn, xsnHex);
     if(xsn.indexOf('日别汇总')===-1&&xsn.indexOf('日別汇总')===-1)continue;
+    console.log('[LOSS] 시트 매칭됨:', xsn);
     var rawX=XLSX.utils.sheet_to_json(wb.Sheets[xsn],{header:1,defval:null,raw:true});
+    console.log('[LOSS] 총 행수:', rawX.length);
     var lastXDate=null;
     for(var xr=1;xr<rawX.length;xr++){
       var rx=rawX[xr];if(!rx)continue;
