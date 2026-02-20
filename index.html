@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v5.3</title>
+<title>Production Performance v5.4</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v5.3</h1>
+<h1>📊 Production Performance v5.4</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -396,7 +396,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='5.3'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='5.4'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 function handleFile(input){
   var file=input.files[0]; if(!file)return;
@@ -483,7 +483,7 @@ function processWorkbook(wb){
     var lastXDate=null;
     for(var xr=1;xr<rawX.length;xr++){
       var rx=rawX[xr];if(!rx)continue;
-      if(rx[0]!=null){var ndx=parseStDate(rx[0]);if(ndx)lastXDate=ndx;}
+      if(rx[0]!=null){var ndx=parseStDate(rx[0]);if(ndx)lastXDate=ndx;else lastXDate=null;}
       if(!lastXDate)continue;
       var rline=(rx[1]||'').toString().trim();if(!rline)continue;
       if(_lossDbg.rows===0)_lossDbg.sample='date='+lastXDate+' line='+rline+' col6='+rx[6]+' col16='+rx[16];
@@ -551,7 +551,7 @@ function processWorkbook(wb){
     for(var j=2;j<raw2.length;j++){
       var rj=raw2[j]; if(!rj)continue;
       // 병합셀 처리: 값이 있을 때만 갱신, 없으면 이전 값 유지
-      if(rj[3]!=null){var nd2=parseStDate(rj[3]);if(nd2)lastDate2=nd2;}
+      if(rj[3]!=null){var nd2=parseStDate(rj[3]);if(nd2)lastDate2=nd2;else lastDate2=null;}
       if(rj[2]!=null){var nw2=(rj[2]||'').toString().trim();if(nw2)lastWeek2=nw2;}
       if(!lastDate2||!rj[4])continue;
       var ds2=lastDate2;
@@ -584,7 +584,7 @@ function processWorkbook(wb){
     var lastDate3=null; // 병합셀 전파용
     for(var k=2;k<raw3.length;k++){
       var rk=raw3[k]; if(!rk)continue;
-      if(rk[3]!=null){var nd3=parseStDate(rk[3]);if(nd3)lastDate3=nd3;}
+      if(rk[3]!=null){var nd3=parseStDate(rk[3]);if(nd3)lastDate3=nd3;else lastDate3=null;}
       if(!lastDate3||!rk[4])continue;
       if((rk[19]||'').toString().trim()!=='停')continue;
       var ds3=lastDate3;
