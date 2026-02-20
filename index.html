@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v4.3</title>
+<title>Production Performance v4.4</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -84,7 +84,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd">
-<h1>📊 Production Performance v4.3</h1>
+<h1>📊 Production Performance v4.4</h1>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
 <div class="file-bar">
@@ -112,7 +112,7 @@ PM调整 데이터를 자동 분석합니다</p>
 
 <script>
 let D=null, charts=[];
-var DATA_VERSION='4.3'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='4.4'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 function handleFile(input){
   var file=input.files[0]; if(!file)return;
@@ -182,24 +182,31 @@ function processWorkbook(wb){
     }
   }
   var _dbgAllSheets=wb.SheetNames.slice();
-  // === 일간 LOSS 현황 - 시트명 대신 내용으로 식별 (col[2]에 'Total'이 있는 시트) ===
+  // === 일간 LOSS 현황 ===
   var lossByLineDate={},lossAccumByLine={},lossDates=[];
+  var _lossDbg={sheets:[],found:'없음',rows:0,sample:''};
   for(var xi=0;xi<wb.SheetNames.length;xi++){
     var xsn=wb.SheetNames[xi];
     var rawX=XLSX.utils.sheet_to_json(wb.Sheets[xsn],{header:1,defval:null,raw:true});
     if(!rawX||rawX.length<6)continue;
-    // 'Total'이 col[2]에 있는 시트 = 日别汇总
-    var isSummarySheet=false;
+    // col[2]에 K1,K2,G,H,E,Total 중 하나가 있는 시트
+    var lineVals=['K1','K2','G','H','E','Total'];
+    var matchCount=0;
     for(var xc=1;xc<Math.min(rawX.length,30);xc++){
-      if(rawX[xc]&&(rawX[xc][2]||'').toString().trim()==='Total'){isSummarySheet=true;break;}
+      var cv=(rawX[xc]&&rawX[xc][2]!=null)?(rawX[xc][2]||'').toString().trim():'';
+      if(lineVals.indexOf(cv)>=0)matchCount++;
     }
-    if(!isSummarySheet)continue;
+    _lossDbg.sheets.push(xsn+'('+matchCount+')');
+    if(matchCount<3)continue;
+    _lossDbg.found=xsn;
     var lastXDate=null;
     for(var xr=1;xr<rawX.length;xr++){
       var rx=rawX[xr];if(!rx)continue;
       if(rx[1]!=null){var ndx=parseStDate(rx[1]);if(ndx)lastXDate=ndx;}
       if(!lastXDate)continue;
       var rline=(rx[2]||'').toString().trim();if(!rline)continue;
+      if(_lossDbg.rows===0)_lossDbg.sample='date='+lastXDate+' line='+rline+' col7='+rx[7]+' col17='+rx[17];
+      _lossDbg.rows++;
       var rprod=typeof rx[7]==='number'?rx[7]:(parseFloat(rx[7])||0);
       var rkpi=typeof rx[16]==='number'?rx[16]:(parseFloat(rx[16])||0);
       var rloss=typeof rx[17]==='number'?rx[17]:(parseFloat(rx[17])||0);
@@ -221,7 +228,7 @@ function processWorkbook(wb){
       prodByWeekEq:{},stopByWeekEq:{},weekList:[],
       prodTotalEq:{},stopTotalEq:{},eqDates:{},eqWeekDates:{},
       lossByLineDate:lossByLineDate,lossAccumByLine:lossAccumByLine,lossDates:lossDates,
-      lossDetailByDateEq:{},dataVersion:DATA_VERSION,
+      lossDetailByDateEq:{},dataVersion:DATA_VERSION,_lossDbg:_lossDbg,
       _dbg:{sheets:_dbgAllSheets,matchedSheets:[],rows:0,dates:0,weeks:0,eqs:[]}
     };
   }
@@ -383,7 +390,7 @@ function processWorkbook(wb){
     prodTotalEq:prodTotalEq,stopTotalEq:stopTotalEq,eqDates:eqDates,eqWeekDates:eqWeekDates,
     lossByLineDate:lossByLineDate,lossAccumByLine:lossAccumByLine,lossDates:lossDates,
     lossDetailByDateEq:lossDetailByDateEq,
-    dataVersion:DATA_VERSION,
+    dataVersion:DATA_VERSION,_lossDbg:_lossDbg,
     _dbg:{sheets:_dbgAllSheets,matchedSheets:_dbgSheets,rows:_dbgRows,dates:Object.keys(prodByDateEq).length,weeks:weekList.length,eqs:Object.keys(prodTotalEq).filter(function(e){return(prodTotalEq[e]||0)>0})}
   };
 }
@@ -885,7 +892,7 @@ function buildLossPage(){
 
 function buildLossDaily(){
   var dates=D.lossDates||[];
-  if(!dates.length)return'<div style="color:#94a3b8;padding:20px;text-align:center">⚠ 日별汇总 시트 데이터 없음</div>';
+  if(!dates.length){var dbg=D._lossDbg||{};return'<div style="color:#94a3b8;padding:16px;font-size:12px">⚠ LOSS 데이터 없음<br>찾은시트:'+dbg.found+'<br>전체시트:'+((dbg.sheets||[]).join(', '))+'<br>행수:'+dbg.rows+'<br>샘플:'+dbg.sample+'</div>';}
   var lines=['K1','K2','G','H','E'];
   var all=lines.concat(['Total']);
   var thS='background:#1e3a5f;color:#94a3b8;padding:5px 8px;font-size:11px;border:1px solid #2a2a2a;white-space:nowrap;text-align:center';
