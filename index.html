@@ -9,7 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'닅슨Lv2고딕','NEXON Lv2 Gothic',sans-serif;background:#000;color:#e2e8f0}
+body{font-family:'넥슨Lv2고딕','NEXON Lv2 Gothic',sans-serif;background:#000;color:#e2e8f0}
 .hd{background:linear-gradient(135deg,#0a0a0a,#1a1a1a);padding:16px 20px;border-bottom:2px solid #3b82f6}
 .hd h1{font-size:20px;color:#ffffff}.hd .ver{font-size:11px;color:#94a3b8;font-weight:400;margin-left:6px}.hd p{font-size:10px;color:#94a3b8;margin-top:4px}
 .file-bar{background:#000;padding:10px 20px;border-bottom:1px solid #1a1a1a;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -86,7 +86,7 @@ table.ht thead th:first-child{z-index:4}
 <body>
 <div class="hd" style="position:relative">
 <h1>📊 Production Performance v4.9</h1>
-<div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit" id="langZh">中文</button></div>
+<div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
 <div class="file-bar">
@@ -117,257 +117,257 @@ let D=null, charts=[];
 var LANG=localStorage.getItem('dashLang')||'ko';
 var I={
 ko:{
-fileSelect:'파일 선택'
-init:'초기화'
-waiting:'대기중'
-uploadGuide:'엑셀 파일을 업로드하면 분석이 시작됩니다'
-selectFile:'파일을 선택해주세요'
-uploadTitle:'파일을 업로드해주세요'
-uploadDesc:'위 버튼을 눌러 엑셀 파일을 선택하세요'
-uploadSupport:'파일을 지원합니다'
-autoAnalysis:'PM调整 데이터를 자동 분석합니다'
-analyzing:'파일 분석 중...'
-processing:'처리중: '
-analyzing2:'분석중...'
-current:'현재: '
-loadDone:'로드완료'
-error:'오류'
-saved:'저장됨'
-savedData:'저장된 데이터'
-updateTitle:'업데이트됨 — 파일을 다시 업로드해 주세요'
-updateDesc:'대시보드가 업데이트(v'
-updateDesc2:')되어 파일을 다시 불러와야 합니다.'
-noData:'데이터 없음'
-noDataFound:'데이터를 찾을 수 없습니다.'
-tabLoss:'LOSS요약'
-tabStop:'정지요약'
-tabDaily:'일자별현황'
-tabDefHm:'불량히트맵'
-tabStopHm:'정지히트맵'
-tabST:'시간대비분석'
-lossTitle:'LOSS 요약'
-lossDaily:'일간 Loss 현황'
-lossDetail:'상세 Loss 현황'
-accum:'누적'
-target:'목표'
-total:'합계'
-line:'라인'
-date:'일자'
-equip:'설비'
-stopTime:'정지시간'
-defect:'불량수량'
-prod:'생산실적'
-plan:'계획(Capa)'
-utilRate:'가동율'
-lossRate:'Loss율'
-kpiTitle:'라인별 정지시간 KPI 현황'
-kpiTarget:'목표: '
-yesterday:'전일'
-weekly:'주간'
-monthly:'월간'
-top3Title:'문제설비 TOP 3'
-top3Hdr:['#','설비','정지시간(주간)','정지건수','불량수량(주간)','주요 조정항목']
-noEquip:'해당 설비 없음'
-worst5Title:'Worst 5'
-worst5Stop:'정지시간 기준 Worst 5'
-worst5Def:'불량수량 기준 Worst 5'
-worst5Hdr:['#','설비','시간(분)','불량수량','주요 조정항목']
-worst5Trend:'전일 정지시간 Worst 5 - 주간 실적 추이'
-worst10Title:'Worst 10'
-worst10Hdr:['#','항목','상세조정내용','불량수량','시간(분)','정지']
-worst10Sum:'합계 (Top10)'
-sortDefect:'불량수량'
-sortTime:'조정시간'
-allOf:'전체'
-topOf:'중 상위'
-items:'건'
-eqHmTitle:'설비 히트맵'
-eqHmDays:'최근'
-eqHmDaysSuffix:'일'
-eqHmDate:'일자'
-eqHmStop:'정지시간(분)'
-eqHmDef:'불량수량'
-eqHmHelp:'셀 클릭 시 해당 일자 상세 내역을 확인할 수 있습니다'
-dayDetailTitle:'Worst 5'
-eqDate:'설비\\\\일자'
-dailyStopDefTitle:'일자별 정지시간 / 불량수량'
-dailyStopVs:'정지 vs 비정지'
-dailyTimeMin:'시간(분)'
-stop:'정지'
-nonStop:'비정지'
-category:'구분'
-count:'건수'
-stTitle:'시간대비분석'
-stDiag:'데이터 진단 (클릭해서 펼치기)'
-stAllSheets:'전체 시트: '
-stMatched:'매칭된 日报 시트: '
-stProcessed:'처리된 행수: '
-stDateCnt:'날짜수: '
-stWeekCnt:'주차수: '
-stEqs:'생산설비: '
-stData:'데이터: '
-stDays:'일'
-stWeeks:'주차'
-stEquips:'대'
-stByDate:'일자별'
-stByWeek:'주차별'
-stAccum:'누적'
-stDateSel:'일자 선택: '
-stWeekSel:'주차 선택: '
-stWeekLabel:'주차'
-stBasis:'기준: '
-stInputHelp:'✎ S/T셀 직접 입력 가능 | 더블클릭→초기화'
-stResetAll:'S/T 전체 초기화'
-stHdr:['설비','S/T실제(초)','Capa','생산량','가동율','차이','정지시간(분)','수량환산','환산차이','결론']
-stNormal:'정상'
-stAbnormal:'S/T 이상'
-stRecordErr:'기록이상'
-stSummary:'요약'
-stModified:'수정됨 (더블클릭→초기화)'
-stDirectInput:'S/T 직접 입력'
-stActual:'S/T실제: '
-stConvDiff:'환산차이: '
-stConclusion:'결론: '
-stOver:'이상'
-lossDetailHdr:['PM조정','완전불량','공정불량','치수불량','Lead교체','Film교체','정지','원자재불량','품질샘플','2차불량','기록차이','M차이','기술조정']
-lossNoData:'LOSS 데이터 없음'
-selDateLine:'선택 날짜/라인 데이터 없음'
-min:'분'
-avgDay:'일평균'
-pmOnly:'PM调整 Only | 停机/开机 제외 | >1000분 제외 | 설비 '
-eqUnit:'대'
-hmDefTitle:'설비 일자별 불량수량'
-hmStopTitle:'설비 일자별 조정시간(분)'
-lineDaily:' Line 일자별 정지시간 / 불량수량'
-lineStopVs:' Line 정지 vs 비정지'
-allDaily:'전체 일자별 정지시간 / 불량수량'
+fileSelect:'파일 선택',
+init:'초기화',
+waiting:'대기중',
+uploadGuide:'엑셀 파일을 업로드하면 분석이 시작됩니다',
+selectFile:'파일을 선택해주세요',
+uploadTitle:'파일을 업로드해주세요',
+uploadDesc:'위 버튼을 눌러 엑셀 파일을 선택하세요',
+uploadSupport:'파일을 지원합니다',
+autoAnalysis:'PM调整 데이터를 자동 분석합니다',
+analyzing:'파일 분석 중...',
+processing:'처리중: ',
+analyzing2:'분석중...',
+current:'현재: ',
+loadDone:'로드완료',
+error:'오류',
+saved:'저장됨',
+savedData:'저장된 데이터',
+updateTitle:'업데이트됨 — 파일을 다시 업로드해 주세요',
+updateDesc:'대시보드가 업데이트(v',
+updateDesc2:')되어 파일을 다시 불러와야 합니다.',
+noData:'데이터 없음',
+noDataFound:'데이터를 찾을 수 없습니다.',
+tabLoss:'LOSS요약',
+tabStop:'정지요약',
+tabDaily:'일자별현황',
+tabDefHm:'불량히트맵',
+tabStopHm:'정지히트맵',
+tabST:'시간대비분석',
+lossTitle:'LOSS 요약',
+lossDaily:'일간 Loss 현황',
+lossDetail:'상세 Loss 현황',
+accum:'누적',
+target:'목표',
+total:'합계',
+line:'라인',
+date:'일자',
+equip:'설비',
+stopTime:'정지시간',
+defect:'불량수량',
+prod:'생산실적',
+plan:'계획(Capa)',
+utilRate:'가동율',
+lossRate:'Loss율',
+kpiTitle:'라인별 정지시간 KPI 현황',
+kpiTarget:'목표: ',
+yesterday:'전일',
+weekly:'주간',
+monthly:'월간',
+top3Title:'문제설비 TOP 3',
+top3Hdr:['#','설비','정지시간(주간)','정지건수','불량수량(주간)','주요 조정항목'],
+noEquip:'해당 설비 없음',
+worst5Title:'Worst 5',
+worst5Stop:'정지시간 기준 Worst 5',
+worst5Def:'불량수량 기준 Worst 5',
+worst5Hdr:['#','설비','시간(분)','불량수량','주요 조정항목'],
+worst5Trend:'전일 정지시간 Worst 5 - 주간 실적 추이',
+worst10Title:'Worst 10',
+worst10Hdr:['#','항목','상세조정내용','불량수량','시간(분)','정지'],
+worst10Sum:'합계 (Top10)',
+sortDefect:'불량수량',
+sortTime:'조정시간',
+allOf:'전체',
+topOf:'중 상위',
+items:'건',
+eqHmTitle:'설비 히트맵',
+eqHmDays:'최근',
+eqHmDaysSuffix:'일',
+eqHmDate:'일자',
+eqHmStop:'정지시간(분)',
+eqHmDef:'불량수량',
+eqHmHelp:'셀 클릭 시 해당 일자 상세 내역을 확인할 수 있습니다',
+dayDetailTitle:'Worst 5',
+eqDate:'설비\\\\일자',
+dailyStopDefTitle:'일자별 정지시간 / 불량수량',
+dailyStopVs:'정지 vs 비정지',
+dailyTimeMin:'시간(분)',
+stop:'정지',
+nonStop:'비정지',
+category:'구분',
+count:'건수',
+stTitle:'시간대비분석',
+stDiag:'데이터 진단 (클릭해서 펼치기)',
+stAllSheets:'전체 시트: ',
+stMatched:'매칭된 日报 시트: ',
+stProcessed:'처리된 행수: ',
+stDateCnt:'날짜수: ',
+stWeekCnt:'주차수: ',
+stEqs:'생산설비: ',
+stData:'데이터: ',
+stDays:'일',
+stWeeks:'주차',
+stEquips:'대',
+stByDate:'일자별',
+stByWeek:'주차별',
+stAccum:'누적',
+stDateSel:'일자 선택: ',
+stWeekSel:'주차 선택: ',
+stWeekLabel:'주차',
+stBasis:'기준: ',
+stInputHelp:'✎ S/T셀 직접 입력 가능 | 더블클릭→초기화',
+stResetAll:'S/T 전체 초기화',
+stHdr:['설비','S/T실제(초)','Capa','생산량','가동율','차이','정지시간(분)','수량환산','환산차이','결론'],
+stNormal:'정상',
+stAbnormal:'S/T 이상',
+stRecordErr:'기록이상',
+stSummary:'요약',
+stModified:'수정됨 (더블클릭→초기화)',
+stDirectInput:'S/T 직접 입력',
+stActual:'S/T실제: ',
+stConvDiff:'환산차이: ',
+stConclusion:'결론: ',
+stOver:'이상',
+lossDetailHdr:['PM조정','완전불량','공정불량','치수불량','Lead교체','Film교체','정지','원자재불량','품질샘플','2차불량','기록차이','M차이','기술조정'],
+lossNoData:'LOSS 데이터 없음',
+selDateLine:'선택 날짜/라인 데이터 없음',
+min:'분',
+avgDay:'일평균',
+pmOnly:'PM调整 Only | 停机/开机 제외 | >1000분 제외 | 설비 ',
+eqUnit:'대',
+hmDefTitle:'설비 일자별 불량수량',
+hmStopTitle:'설비 일자별 조정시간(분)',
+lineDaily:' Line 일자별 정지시간 / 불량수량',
+lineStopVs:' Line 정지 vs 비정지',
+allDaily:'전체 일자별 정지시간 / 불량수량',
 allStopVs:'전체 정지 vs 비정지'
 },
 zh:{
-fileSelect:'选择文件'
-init:'初始化'
-waiting:'待机中'
-uploadGuide:'上传Excel文件后开始分析'
-selectFile:'请选择文件'
-uploadTitle:'请上传文件'
-uploadDesc:'请点击上方按钮选择Excel文件'
-uploadSupport:'文件'
-autoAnalysis:'PM调整 数据自动分析'
-analyzing:'文件分析中...'
-processing:'处理中: '
-analyzing2:'分析中...'
-current:'当前: '
-loadDone:'加载完成'
-error:'错误'
-saved:'已保存'
-savedData:'已保存数据'
-updateTitle:'已更新 — 请重新上传文件'
-updateDesc:'仪表板已更新(v'
-updateDesc2:')，请重新上传文件。'
-noData:'无数据'
-noDataFound:'未找到数据。'
-tabLoss:'LOSS汇总'
-tabStop:'停机汇总'
-tabDaily:'日别现况'
-tabDefHm:'不良热图'
-tabStopHm:'停机热图'
-tabST:'时间对比分析'
-lossTitle:'LOSS 汇总'
-lossDaily:'日间 Loss 现况'
-lossDetail:'详细 Loss 现况'
-accum:'累计'
-target:'目标'
-total:'合计'
-line:'产线'
-date:'日期'
-equip:'设备'
-stopTime:'停机时间'
-defect:'不良数量'
-prod:'生产业绩'
-plan:'计划(Capa)'
-utilRate:'稼动率'
-lossRate:'Loss率'
-kpiTitle:'产线停机时间 KPI 现况'
-kpiTarget:'目标: '
-yesterday:'前日'
-weekly:'周间'
-monthly:'月间'
-top3Title:'问题设备 TOP 3'
-top3Hdr:['#','设备','停机时间(周间)','停机次数','不良数量(周间)','主要调整项目']
-noEquip:'无相关设备'
-worst5Title:'Worst 5'
-worst5Stop:'停机时间 Worst 5'
-worst5Def:'不良数量 Worst 5'
-worst5Hdr:['#','设备','时间(分)','不良数量','主要调整项目']
-worst5Trend:'前日停机 Worst 5 - 周间实绩趋势'
-worst10Title:'Worst 10'
-worst10Hdr:['#','项目','详细调整内容','不良数量','时间(分)','停机']
-worst10Sum:'合计 (Top10)'
-sortDefect:'不良数量'
-sortTime:'调整时间'
-allOf:'全部'
-topOf:'中前'
-items:'件'
-eqHmTitle:'设备热图'
-eqHmDays:'最近'
-eqHmDaysSuffix:'天'
-eqHmDate:'日期'
-eqHmStop:'停机时间(分)'
-eqHmDef:'不良数量'
-eqHmHelp:'点击单元格可查看当日详情'
-dayDetailTitle:'Worst 5'
-eqDate:'设备\\\\日期'
-dailyStopDefTitle:'日别停机时间 / 不良数量'
-dailyStopVs:'停机 vs 非停机'
-dailyTimeMin:'时间(分)'
-stop:'停机'
-nonStop:'非停机'
-category:'区分'
-count:'次数'
-stTitle:'时间对比分析'
-stDiag:'数据诊断 (点击展开)'
-stAllSheets:'全部工作表: '
-stMatched:'匹配日报工作表: '
-stProcessed:'处理行数: '
-stDateCnt:'日期数: '
-stWeekCnt:'周数: '
-stEqs:'生产设备: '
-stData:'数据: '
-stDays:'天'
-stWeeks:'周'
-stEquips:'台'
-stByDate:'日别'
-stByWeek:'周别'
-stAccum:'累计'
-stDateSel:'日期选择: '
-stWeekSel:'周选择: '
-stWeekLabel:'周'
-stBasis:'基准: '
-stInputHelp:'✎ S/T单元格可直接输入 | 双击→重置'
-stResetAll:'S/T 全部重置'
-stHdr:['设备','S/T实际(秒)','Capa','生产量','稼动率','差异','停机时间(分)','数量换算','换算差异','结论']
-stNormal:'正常'
-stAbnormal:'S/T 异常'
-stRecordErr:'记录异常'
-stSummary:'汇总'
-stModified:'已修改 (双击→重置)'
-stDirectInput:'S/T 直接输入'
-stActual:'S/T实际: '
-stConvDiff:'换算差异: '
-stConclusion:'结论: '
-stOver:'异常'
-lossDetailHdr:['PM调整','完全不良','工程不良','尺寸不良','Lead更换','Film更换','停机','原资材不良','品质样品','二次不良','记录差异','M差异','技术调整']
-lossNoData:'LOSS 无数据'
-selDateLine:'无所选日期/产线数据'
-min:'分'
-avgDay:'日均'
-pmOnly:'PM调整 Only | 停机/开机 除外 | >1000分 除外 | 设备 '
-eqUnit:'台'
-hmDefTitle:'设备日别不良数量'
-hmStopTitle:'设备日别调整时间(分)'
-lineDaily:' Line 日别停机时间 / 不良数量'
-lineStopVs:' Line 停机 vs 非停机'
-allDaily:'全体日别停机时间 / 不良数量'
+fileSelect:'选择文件',
+init:'初始化',
+waiting:'待机中',
+uploadGuide:'上传Excel文件后开始分析',
+selectFile:'请选择文件',
+uploadTitle:'请上传文件',
+uploadDesc:'请点击上方按钮选择Excel文件',
+uploadSupport:'文件',
+autoAnalysis:'PM调整 数据自动分析',
+analyzing:'文件分析中...',
+processing:'处理中: ',
+analyzing2:'分析中...',
+current:'当前: ',
+loadDone:'加载完成',
+error:'错误',
+saved:'已保存',
+savedData:'已保存数据',
+updateTitle:'已更新 — 请重新上传文件',
+updateDesc:'仪表板已更新(v',
+updateDesc2:')，请重新上传文件。',
+noData:'无数据',
+noDataFound:'未找到数据。',
+tabLoss:'LOSS汇总',
+tabStop:'停机汇总',
+tabDaily:'日别现况',
+tabDefHm:'不良热图',
+tabStopHm:'停机热图',
+tabST:'时间对比分析',
+lossTitle:'LOSS 汇总',
+lossDaily:'日间 Loss 现况',
+lossDetail:'详细 Loss 现况',
+accum:'累计',
+target:'目标',
+total:'合计',
+line:'产线',
+date:'日期',
+equip:'设备',
+stopTime:'停机时间',
+defect:'不良数量',
+prod:'生产业绩',
+plan:'计划(Capa)',
+utilRate:'稼动率',
+lossRate:'Loss率',
+kpiTitle:'产线停机时间 KPI 现况',
+kpiTarget:'目标: ',
+yesterday:'前日',
+weekly:'周间',
+monthly:'月间',
+top3Title:'问题设备 TOP 3',
+top3Hdr:['#','设备','停机时间(周间)','停机次数','不良数量(周间)','主要调整项目'],
+noEquip:'无相关设备',
+worst5Title:'Worst 5',
+worst5Stop:'停机时间 Worst 5',
+worst5Def:'不良数量 Worst 5',
+worst5Hdr:['#','设备','时间(分)','不良数量','主要调整项目'],
+worst5Trend:'前日停机 Worst 5 - 周间实绩趋势',
+worst10Title:'Worst 10',
+worst10Hdr:['#','项目','详细调整内容','不良数量','时间(分)','停机'],
+worst10Sum:'合计 (Top10)',
+sortDefect:'不良数量',
+sortTime:'调整时间',
+allOf:'全部',
+topOf:'中前',
+items:'件',
+eqHmTitle:'设备热图',
+eqHmDays:'最近',
+eqHmDaysSuffix:'天',
+eqHmDate:'日期',
+eqHmStop:'停机时间(分)',
+eqHmDef:'不良数量',
+eqHmHelp:'点击单元格可查看当日详情',
+dayDetailTitle:'Worst 5',
+eqDate:'设备\\\\日期',
+dailyStopDefTitle:'日别停机时间 / 不良数量',
+dailyStopVs:'停机 vs 非停机',
+dailyTimeMin:'时间(分)',
+stop:'停机',
+nonStop:'非停机',
+category:'区分',
+count:'次数',
+stTitle:'时间对比分析',
+stDiag:'数据诊断 (点击展开)',
+stAllSheets:'全部工作表: ',
+stMatched:'匹配日报工作表: ',
+stProcessed:'处理行数: ',
+stDateCnt:'日期数: ',
+stWeekCnt:'周数: ',
+stEqs:'生产设备: ',
+stData:'数据: ',
+stDays:'天',
+stWeeks:'周',
+stEquips:'台',
+stByDate:'日别',
+stByWeek:'周别',
+stAccum:'累计',
+stDateSel:'日期选择: ',
+stWeekSel:'周选择: ',
+stWeekLabel:'周',
+stBasis:'基准: ',
+stInputHelp:'✎ S/T单元格可直接输入 | 双击→重置',
+stResetAll:'S/T 全部重置',
+stHdr:['设备','S/T实际(秒)','Capa','生产量','稼动率','差异','停机时间(分)','数量换算','换算差异','结论'],
+stNormal:'正常',
+stAbnormal:'S/T 异常',
+stRecordErr:'记录异常',
+stSummary:'汇总',
+stModified:'已修改 (双击→重置)',
+stDirectInput:'S/T 直接输入',
+stActual:'S/T实际: ',
+stConvDiff:'换算差异: ',
+stConclusion:'结论: ',
+stOver:'异常',
+lossDetailHdr:['PM调整','完全不良','工程不良','尺寸不良','Lead更换','Film更换','停机','原资材不良','品质样品','二次不良','记录差异','M差异','技术调整'],
+lossNoData:'LOSS 无数据',
+selDateLine:'无所选日期/产线数据',
+min:'分',
+avgDay:'日均',
+pmOnly:'PM调整 Only | 停机/开机 除外 | >1000分 除外 | 设备 ',
+eqUnit:'台',
+hmDefTitle:'设备日别不良数量',
+hmStopTitle:'设备日别调整时间(分)',
+lineDaily:' Line 日别停机时间 / 不良数量',
+lineStopVs:' Line 停机 vs 非停机',
+allDaily:'全体日别停机时间 / 不良数量',
 allStopVs:'全体停机 vs 非停机'
 }
 };
