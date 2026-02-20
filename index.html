@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v4.9</title>
+<title>Production Performance v5.0</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v4.9</h1>
+<h1>📊 Production Performance v5.0</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -141,7 +141,8 @@ noData:'데이터 없음',
 noDataFound:'데이터를 찾을 수 없습니다.',
 tabLoss:'LOSS요약',
 tabStop:'정지요약',
-tabDaily:'일자별현황',
+tabUtil:'가동율현황',
+tabDaily:'정지시간현황',
 tabDefHm:'불량히트맵',
 tabStopHm:'정지히트맵',
 tabST:'시간대비분석',
@@ -236,6 +237,10 @@ min:'분',
 avgDay:'일평균',
 pmOnly:'PM调整 Only | 停机/开机 제외 | >1000분 제외 | 설비 ',
 eqUnit:'대',
+utilTitle:'가동율 현황',
+utilTarget:'목표',
+kpiDateLabel:'기준일',
+hmAvg:'평균',
 hmDefTitle:'설비 일자별 불량수량',
 hmStopTitle:'설비 일자별 조정시간(분)',
 lineDaily:' Line 일자별 정지시간 / 불량수량',
@@ -268,7 +273,8 @@ noData:'无数据',
 noDataFound:'未找到数据。',
 tabLoss:'LOSS汇总',
 tabStop:'停机汇总',
-tabDaily:'日别现况',
+tabUtil:'稼动率现况',
+tabDaily:'停机时间现况',
 tabDefHm:'不良热图',
 tabStopHm:'停机热图',
 tabST:'时间对比分析',
@@ -363,6 +369,10 @@ min:'分',
 avgDay:'日均',
 pmOnly:'PM调整 Only | 停机/开机 除外 | >1000分 除外 | 设备 ',
 eqUnit:'台',
+utilTitle:'稼动率 现况',
+utilTarget:'目标',
+kpiDateLabel:'基准日',
+hmAvg:'平均',
 hmDefTitle:'设备日别不良数量',
 hmStopTitle:'设备日别调整时间(分)',
 lineDaily:' Line 日别停机时间 / 不良数量',
@@ -386,7 +396,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='4.9'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='5.0'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 function handleFile(input){
   var file=input.files[0]; if(!file)return;
@@ -435,14 +445,10 @@ function processWorkbook(wb){
       if(cat!=='PM调整')continue;
       var sub=(r[14]||'').toString().trim();
       if(sub==='停机'||sub==='开机'||!sub)continue;
-      var dt=r[3],dateStr='';
-      if(dt instanceof Date){try{dateStr=new Date(dt).toLocaleDateString('en-CA')}catch(e){continue}}
-      else if(typeof dt==='string'){dateStr=dt}
-      else if(typeof dt==='number'){var d2=new Date((dt-25569)*86400000);dateStr=d2.toISOString().slice(0,10)}
+      var dateStr=parseStDate(r[3]);
       if(!dateStr)continue;
-      var mm=String(new Date(dateStr).getMonth()+1).padStart(2,'0');
-      var dd=String(new Date(dateStr).getDate()).padStart(2,'0');
-      var ds=mm+'/'+dd;
+      var dtParts=dateStr.split('-');
+      var ds=dtParts[1]+'/'+dtParts[2];
       var eq=(r[4]||'').toString().trim().toUpperCase();
       if(!eq)continue;
       var stopTime=parseFloat(r[11])||0, nonStopTime=parseFloat(r[12])||0;
@@ -484,9 +490,10 @@ function processWorkbook(wb){
       var rprod=typeof rx[6]==='number'?rx[6]:(parseFloat(rx[6])||0);
       var rkpi=typeof rx[15]==='number'?rx[15]:(parseFloat(rx[15])||0);
       var rloss=typeof rx[16]==='number'?rx[16]:(parseFloat(rx[16])||0);
+      var rutil=typeof rx[10]==='number'?rx[10]:(parseFloat(rx[10])||0);
       if(rloss>=1.0)continue; // 100% 이상은 오류 데이터 제외
       if(!lossByLineDate[lastXDate])lossByLineDate[lastXDate]={};
-      lossByLineDate[lastXDate][rline]={r:rloss,p:rprod};
+      lossByLineDate[lastXDate][rline]={r:rloss,p:rprod,u:rutil};
       if(!lossAccumByLine[rline])lossAccumByLine[rline]={prod:0,loss:0};
       lossAccumByLine[rline].prod+=rprod;lossAccumByLine[rline].loss+=rkpi;
     }
@@ -511,9 +518,18 @@ function processWorkbook(wb){
   // === 시간대비분석 데이터 ===
   function parseStDate(v){
     if(!v)return'';
-    if(v instanceof Date){try{return v.toLocaleDateString('en-CA')}catch(e){return''}}
-    if(typeof v==='number'){var d=new Date(Math.round((v-25569)*86400)*1000);return d.toLocaleDateString('en-CA')}
-    if(typeof v==='string'){var m=v.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);if(m)return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0')}
+    if(v instanceof Date){
+      var y=v.getUTCFullYear(),m=v.getUTCMonth()+1,d=v.getUTCDate();
+      if(y<2000){y=v.getFullYear();m=v.getMonth()+1;d=v.getDate();}
+      return y+'-'+(m<10?'0'+m:m)+'-'+(d<10?'0'+d:d);
+    }
+    if(typeof v==='number'){
+      var ms=Math.round((v-25569)*86400000);
+      var dt=new Date(ms);
+      var y2=dt.getUTCFullYear(),m2=dt.getUTCMonth()+1,d2=dt.getUTCDate();
+      return y2+'-'+(m2<10?'0'+m2:m2)+'-'+(d2<10?'0'+d2:d2);
+    }
+    if(typeof v==='string'){var mt=v.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);if(mt)return mt[1]+'-'+mt[2].padStart(2,'0')+'-'+mt[3].padStart(2,'0')}
     return'';
   }
   var prodByDateEq={}, eqStRaw={}, dateToWeek={}, eqDates={}, eqWeekDates={};
@@ -673,22 +689,23 @@ function processWorkbook(wb){
 function go(i){document.querySelectorAll('.pn').forEach(function(p,x){p.classList.toggle('on',x===i)});document.querySelectorAll('.tab').forEach(function(t,x){t.classList.toggle('on',x===i)})}
 function hcl(v,mx){if(!v||v===0)return'h0';var r=v/mx;return r<.08?'h1':r<.2?'h2':r<.35?'h3':r<.55?'h4':r<.75?'h5':'h6'}
 
-function buildDailyHT(data,vk,equips,dates){
+function buildDailyHT(data,vk,equips,dates,isAvg){
   var lk={},mx=0;
   for(var i=0;i<data.length;i++){var r=data[i];var k=r['설비호']+'|'+r['일자str'];var v=r[vk]||0;lk[k]=v;if(v>mx)mx=v}
   var lo={K:0,H:1,G:2};
   var et=equips.map(function(e){return{e:e,t:dates.reduce(function(s,d){return s+(lk[e+'|'+d]||0)},0)}}).sort(function(a,b){var la=lo[a.e[0]]!=null?lo[a.e[0]]:9,lb=lo[b.e[0]]!=null?lo[b.e[0]]:9;if(la!==lb)return la-lb;return b.t-a.t}).map(function(x){return x.e});
   var h='<table class="ht"><thead><tr><th>'+t('eqDate')+'</th>';
   dates.forEach(function(d){h+='<th>'+d+'</th>'});
-  h+='<th style="background:#1e40af">'+t('total')+'</th></tr></thead><tbody>';
+  var sumLabel=isAvg?t('hmAvg'):t('total');
+  h+='<th style="background:#1e40af">'+sumLabel+'</th></tr></thead><tbody>';
   var sortField=vk==='time'?'time':'defect';
-  et.forEach(function(eq){h+='<tr><th>'+eq+'</th>';var rs=0;dates.forEach(function(d){var v=lk[eq+'|'+d]||0;rs+=v;
+  et.forEach(function(eq){h+='<tr><th>'+eq+'</th>';var rs=0,rn=0;dates.forEach(function(d){var v=lk[eq+'|'+d]||0;rs+=v;if(v>0)rn++;
     if(v){h+='<td class="'+hcl(v,mx)+' hm-click" onclick="showDetail(\''+eq+'\',\''+d+'\',\''+sortField+'\')">'+Math.round(v).toLocaleString()+'</td>'}
     else{h+='<td class="'+hcl(v,mx)+'"></td>'}
-  });h+='<td style="background:#1e3a5f;font-weight:700;color:#60a5fa">'+Math.round(rs).toLocaleString()+'</td></tr>'});
-  h+='<tr><th style="background:#1e40af">'+t('total')+'</th>';var gt=0;
-  dates.forEach(function(d){var cs=et.reduce(function(s,e){return s+(lk[e+'|'+d]||0)},0);gt+=cs;h+='<td style="background:#1e3a5f;font-weight:700;color:#60a5fa">'+Math.round(cs).toLocaleString()+'</td>'});
-  h+='<td style="background:#1e40af;font-weight:700;color:#fcd34d">'+Math.round(gt).toLocaleString()+'</td></tr></tbody></table>';
+  });var rowVal=isAvg&&rn>0?rs/rn:rs;h+='<td style="background:#1e3a5f;font-weight:700;color:#60a5fa">'+Math.round(rowVal).toLocaleString()+'</td></tr>'});
+  h+='<tr><th style="background:#1e40af">'+sumLabel+'</th>';var gt=0,gn=0;
+  dates.forEach(function(d){var cs=0,cn=0;et.forEach(function(e){var v=lk[e+'|'+d]||0;cs+=v;if(v>0)cn++;});var colVal=isAvg&&cn>0?cs/cn:cs;gt+=colVal;gn++;h+='<td style="background:#1e3a5f;font-weight:700;color:#60a5fa">'+Math.round(colVal).toLocaleString()+'</td>'});
+  h+='<td style="background:#1e40af;font-weight:700;color:#fcd34d">'+Math.round(isAvg&&gn>0?gt/gn:gt).toLocaleString()+'</td></tr></tbody></table>';
   return h;
 }
 
@@ -864,16 +881,23 @@ function buildStopTableWide(data){
   return h;
 }
 
+var _summaryDate='';
+function renderSummaryWithDate(date){
+  _summaryDate=date;
+  var panel=document.getElementById('summaryPanel');
+  if(panel){panel.innerHTML=buildSummaryPage();renderWorstWeekChart();}
+}
 function buildSummaryPage(){
   if(!D||!D.allRows||!D.all_dates||D.all_dates.length===0)return'<div style="padding:20px;color:#94a3b8">'+t('noData')+'</div>';
   var KPI_TARGET=50;
   var dates=D.all_dates;
-  var lastDate=dates[dates.length-1];
+  var lastDate=_summaryDate&&dates.indexOf(_summaryDate)>=0?_summaryDate:dates[dates.length-1];
+  var lastIdx=dates.indexOf(lastDate);
   var lines=['K','G','H'];
   var lineColors={K:'#f59e0b',G:'#06b6d4',H:'#22c55e'};
 
-  var weekDates=dates.slice(Math.max(0,dates.length-7));
-  var monthDates=dates.slice(Math.max(0,dates.length-30));
+  var weekDates=dates.slice(Math.max(0,lastIdx-6),lastIdx+1);
+  var monthDates=dates.slice(Math.max(0,lastIdx-29),lastIdx+1);
 
   // Helper: get average stop time per equipment for a line on a date
   // e.g. K12=30min, K11=30min → avg = (30+30)/2 = 30min
@@ -924,7 +948,11 @@ function buildSummaryPage(){
   }
 
   // === Section 1: Stop Time KPI by Line (per-equipment average) ===
-  var h='<div class="sum-section"><div class="bx"><h3>&#9201; '+t('kpiTitle')+' <em>'+t('kpiTarget')+KPI_TARGET+t('min')+'</em></h3>';
+  var selS2='background:#1a1a1a;color:#e2e8f0;border:1px solid #3b82f6;border-radius:6px;padding:4px 8px;font-size:12px;margin-left:8px';
+  var h='<div class="sum-section"><div class="bx"><h3 style="display:flex;align-items:center;flex-wrap:wrap">&#9201; '+t('kpiTitle')+' <em>'+t('kpiTarget')+KPI_TARGET+t('min')+'</em>';
+  h+='<span style="margin-left:auto"><label style="color:#94a3b8;font-size:11px">'+t('kpiDateLabel')+'</label><select onchange="renderSummaryWithDate(this.value)" style="'+selS2+'">';
+  dates.slice().reverse().forEach(function(d){h+='<option value="'+d+'"'+(d===lastDate?' selected':'')+'>'+d+'</option>';});
+  h+='</select></span></h3>';
   h+='<table class="sum-tbl"><thead><tr><th>'+t('category')+'</th><th style="color:#60a5fa">'+t('total')+'</th>';
   lines.forEach(function(ln){h+='<th style="color:'+lineColors[ln]+'">'+ln+' Line</th>'});
   h+='</tr></thead><tbody>';
@@ -962,7 +990,7 @@ function buildSummaryPage(){
 
   // === Section 1-2: Persistent Problem Equipment (Top 3) ===
   // Find equipment with consistently high stop time + defect over 7+ days
-  var recentDates=dates.slice(Math.max(0,dates.length-7));
+  var recentDates=dates.slice(Math.max(0,lastIdx-6),lastIdx+1);
   var allEqs=Object.keys(D.allRows.reduce(function(m,r){m[r.eq]=1;return m},{}));
 
   var eqScores=[];
@@ -1065,7 +1093,7 @@ function buildSummaryPage(){
 
   // === Section 3: Weekly performance chart for worst 5 equipment (by time) ===
   h+='<div class="sum-section"><div class="bx"><h3>&#128200; '+t('worst5Trend')+'</h3>';
-  h+='<div style="position:relative;max-height:400px"><canvas id="worstWeekChart"></canvas></div>';
+  h+='<div style="position:relative;width:100%"><canvas id="worstWeekChart"></canvas></div>';
   h+='</div></div>';
 
   return h;
@@ -1074,8 +1102,9 @@ function buildSummaryPage(){
 function renderWorstWeekChart(){
   if(!D||!D.allRows||!D.all_dates||D.all_dates.length===0)return;
   var dates=D.all_dates;
-  var lastDate=dates[dates.length-1];
-  var weekDates=dates.slice(Math.max(0,dates.length-7));
+  var lastDate=_summaryDate&&dates.indexOf(_summaryDate)>=0?_summaryDate:dates[dates.length-1];
+  var lastIdx=dates.indexOf(lastDate);
+  var weekDates=dates.slice(Math.max(0,lastIdx-6),lastIdx+1);
 
   // Get worst 5 by time for previous day
   var prevRows=D.allRows.filter(function(r){return r.ds===lastDate});
@@ -1111,7 +1140,7 @@ function renderWorstWeekChart(){
     type:'line',
     data:{labels:weekDates,datasets:datasets},
     options:{
-      responsive:true,maintainAspectRatio:true,
+      responsive:true,maintainAspectRatio:true,aspectRatio:2.5,
       plugins:{
         legend:{labels:{color:'#e2e8f0',font:{size:11}},position:'bottom'},
         tooltip:{backgroundColor:'#0a0a0a',titleColor:'#60a5fa',bodyColor:'#e2e8f0',callbacks:{label:function(c){return c.dataset.label+': '+Math.round(c.parsed.y).toLocaleString()+t('min')}}}
@@ -1146,12 +1175,21 @@ function fmtLoss(v){
   return(v*100).toFixed(2)+'%';
 }
 function lossClr(v){
-  // 값이 높을수록 진한 빨강 배경색 반환
   if(!v||v===0)return'transparent';
-  if(v<=LOSS_TARGET)return'rgba(34,197,94,0.25)'; // 목표 이하=연한 초록
-  var p=Math.min((v-LOSS_TARGET)/(0.15-LOSS_TARGET),1); // 6~15% 범위에서 0→1
-  var r=Math.round(120+135*p), g=Math.round(30*(1-p)), b=Math.round(30*(1-p));
-  return'rgba('+r+','+g+','+b+','+(0.3+0.5*p)+')';
+  if(v<=0.03)return'rgba(34,197,94,0.15)';
+  if(v<=LOSS_TARGET)return'rgba(34,197,94,0.35)';
+  if(v<=0.08)return'rgba(251,191,36,0.3)';
+  if(v<=0.10)return'rgba(251,146,60,0.45)';
+  if(v<=0.15)return'rgba(239,68,68,0.5)';
+  return'rgba(220,38,38,0.7)';
+}
+function detailClr(ratio){
+  if(!ratio||ratio<=0)return'transparent';
+  if(ratio<0.2)return'rgba(59,130,246,0.15)';
+  if(ratio<0.4)return'rgba(59,130,246,0.3)';
+  if(ratio<0.6)return'rgba(251,191,36,0.35)';
+  if(ratio<0.8)return'rgba(251,146,60,0.45)';
+  return'rgba(239,68,68,0.55)';
 }
 
 function buildLossPage(){
@@ -1177,11 +1215,11 @@ function buildLossDaily(){
   var thS='background:#1e3a5f;color:#94a3b8;padding:5px 8px;font-size:11px;border:1px solid #2a2a2a;white-space:nowrap;text-align:center';
   var tdS='padding:4px 8px;font-size:11px;border:1px solid #2a2a2a;text-align:center;white-space:nowrap';
   var stickyA='position:sticky;left:0;z-index:1;';
-  var stickyB='position:sticky;left:52px;z-index:1;';
+  var tblW=52+70+dates.length*65;
   var h='<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">';
   h+='<table style="border-collapse:collapse;min-width:max-content"><thead><tr>';
   h+='<th style="'+thS+';'+stickyA+'background:#1e3a5f;min-width:52px">'+t('line')+'</th>';
-  h+='<th style="'+thS+';'+stickyB+'background:#1e3a5f;min-width:70px">'+t('accum')+'</th>';
+  h+='<th style="'+thS+';background:#1e3a5f;min-width:70px">'+t('accum')+'</th>';
   dates.forEach(function(dt){var d=new Date(dt+'T00:00:00');h+='<th style="'+thS+'">'+(d.getMonth()+1)+'/'+(d.getDate())+'</th>';});
   h+='</tr></thead><tbody>';
   all.forEach(function(ln){
@@ -1199,7 +1237,7 @@ function buildLossDaily(){
       var a2=D.lossAccumByLine[ln]||{prod:0,loss:0};
       accum=a2.prod>0?a2.loss/a2.prod:0;
     }
-    h+='<td style="'+tdS+';'+stickyB+'background:'+lossClr(accum)+';'+(isT?'':'')+'color:#fff;font-weight:700;min-width:70px">'+fmtLoss(accum)+'</td>';
+    h+='<td style="'+tdS+';background:'+lossClr(accum)+';color:#fff;font-weight:700;min-width:70px">'+fmtLoss(accum)+'</td>';
     dates.forEach(function(dt){
       var v;
       if(isT){
@@ -1214,11 +1252,10 @@ function buildLossDaily(){
   });
   // 목표행
   h+='<tr><td style="'+tdS+';'+stickyA+'background:#0a0a0a;color:#f59e0b;font-weight:700;min-width:52px">'+t('target')+'</td>';
-  h+='<td style="'+tdS+';'+stickyB+'background:#0a0a0a;color:#f59e0b;font-weight:700;min-width:70px">6.00%</td>';
+  h+='<td style="'+tdS+';background:#0a0a0a;color:#f59e0b;font-weight:700;min-width:70px">6.00%</td>';
   dates.forEach(function(){h+='<td style="'+tdS+';color:#f59e0b">6.00%</td>';});
   h+='</tr></tbody></table>';
-  var chartW=Math.max(800,(dates.length+2)*70);
-  h+='<div style="margin-top:20px;min-width:'+chartW+'px"><canvas id="lossChart"></canvas></div>';
+  h+='<div style="margin-top:20px;min-width:'+tblW+'px"><canvas id="lossChart"></canvas></div>';
   h+='</div>';
   return h;
 }
@@ -1248,6 +1285,16 @@ function buildLossDetail(){
   t('lossDetailHdr').forEach(function(c){h+='<th style="'+thS+'">'+c+'</th>';});
   h+='</tr></thead><tbody>';
   var totProd=0,totCapa=0,totLarr=new Array(13).fill(0);
+  // 컬럼별 max값 계산 (세로 색조용)
+  var colMaxLoss=0,colMaxArr=new Array(13).fill(0);
+  eqList.forEach(function(eq){
+    var d=dateData[eq],prod=d.prod||0;
+    var stA=getSTActual(eq)||(d.st>0?d.st:0);
+    var capa=stA>0?Math.round(86400/stA):0;
+    var lossR=capa>0?Math.max(0,(capa-prod)/capa):0;
+    if(lossR>colMaxLoss)colMaxLoss=lossR;
+    d.larr.forEach(function(v,i){var pct=prod>0&&v>0?v/prod:0;if(pct>colMaxArr[i])colMaxArr[i]=pct;});
+  });
   eqList.forEach(function(eq){
     var d=dateData[eq];
     var prod=d.prod||0;
@@ -1260,8 +1307,9 @@ function buildLossDetail(){
     h+='<td style="'+tdS+'">'+capa.toLocaleString()+'</td>';
     h+='<td style="'+tdS+'">'+Math.round(prod).toLocaleString()+'</td>';
     h+='<td style="'+tdS+';color:'+(util>=0.9?'#22c55e':util>=0.7?'#f59e0b':'#ef4444')+'">'+( util>0?(util*100).toFixed(1)+'%':'-')+'</td>';
-    h+='<td style="'+tdS+';color:'+lossClr(lossR)+'">'+fmtLoss(lossR)+'</td>';
-    d.larr.forEach(function(v,i){totLarr[i]+=v;h+='<td style="'+tdS+'">'+(prod>0&&v>0?(v/prod*100).toFixed(2)+'%':'-')+'</td>';});
+    var lrRatio=colMaxLoss>0?lossR/colMaxLoss:0;
+    h+='<td style="'+tdS+';background:'+detailClr(lrRatio)+';color:#fff">'+fmtLoss(lossR)+'</td>';
+    d.larr.forEach(function(v,i){totLarr[i]+=v;var pct=prod>0&&v>0?v/prod:0;var ratio=colMaxArr[i]>0?pct/colMaxArr[i]:0;h+='<td style="'+tdS+';background:'+detailClr(ratio)+';color:#fff">'+(pct>0?(pct*100).toFixed(2)+'%':'-')+'</td>';});
     h+='</tr>';
   });
   // Total 행
@@ -1272,8 +1320,8 @@ function buildLossDetail(){
   h+='<td style="'+tdS+'">'+totCapa.toLocaleString()+'</td>';
   h+='<td style="'+tdS+'">'+Math.round(totProd).toLocaleString()+'</td>';
   h+='<td style="'+tdS+';color:'+(totUtil>=0.9?'#22c55e':totUtil>=0.7?'#f59e0b':'#ef4444')+'">'+( totUtil>0?(totUtil*100).toFixed(1)+'%':'-')+'</td>';
-  h+='<td style="'+tdS+';color:'+lossClr(totLoss)+'">'+fmtLoss(totLoss)+'</td>';
-  totLarr.forEach(function(v){h+='<td style="'+tdS+'">'+(totProd>0&&v>0?(v/totProd*100).toFixed(2)+'%':'-')+'</td>';});
+  h+='<td style="'+tdS+';background:'+detailClr(colMaxLoss>0?totLoss/colMaxLoss:0)+';color:#fff">'+fmtLoss(totLoss)+'</td>';
+  totLarr.forEach(function(v,i){var pct=totProd>0&&v>0?v/totProd:0;var ratio=colMaxArr[i]>0?pct/colMaxArr[i]:0;h+='<td style="'+tdS+';background:'+detailClr(ratio)+';color:#fff">'+(pct>0?(pct*100).toFixed(2)+'%':'-')+'</td>';});
   h+='</tr>';
   h+='</tbody></table></div>';
   return h;
@@ -1297,6 +1345,11 @@ function initLossChart(){
     return{label:ln,data:dates.map(function(dt){var v=D.lossByLineDate[dt]&&D.lossByLineDate[dt][ln];return v&&v.r>0?Math.round(v.r*10000)/100:null;}),
       borderColor:LOSS_LINE_COLORS[ln],backgroundColor:'transparent',pointRadius:3,tension:0.3,spanGaps:true};
   });
+  // Total 추가 (가중평균)
+  datasets.push({label:'Total',data:dates.map(function(dt){
+    var tp=0,tl=0;lines.forEach(function(l){var dd=D.lossByLineDate[dt]&&D.lossByLineDate[dt][l];if(dd){tp+=dd.p;tl+=dd.p*dd.r;}});
+    return tp>0?Math.round(tl/tp*10000)/100:null;
+  }),borderColor:LOSS_LINE_COLORS.Total,backgroundColor:'transparent',pointRadius:3,tension:0.3,spanGaps:true,borderWidth:2});
   datasets.push({label:t('target')+'(6%)',data:dates.map(function(){return 6;}),borderColor:'#f59e0b',borderDash:[5,5],pointRadius:0,tension:0});
   var ctx=canvas.getContext('2d');
   var ch=new Chart(ctx,{type:'line',
@@ -1310,6 +1363,60 @@ function initLossChart(){
 }
 // ===================== LOSS 끝 =====================
 
+// ===================== 가동율현황 =====================
+function buildUtilPage(){
+  if(!D||!D.lossDates||!D.lossDates.length)return'<div style="padding:20px;color:#94a3b8">'+t('noData')+'</div>';
+  var dates=D.lossDates;
+  var lineGroups=[
+    {key:'Total',color:'#f87171',label:'Total'},
+    {key:'K1',color:'#3b82f6',label:'K1'},
+    {key:'K2',color:'#8b5cf6',label:'K2'},
+    {key:'G',color:'#06b6d4',label:'G'},
+    {key:'H',color:'#22c55e',label:'H'},
+    {key:'E',color:'#f59e0b',label:'E'}
+  ];
+  var h='';
+  lineGroups.forEach(function(g){
+    h+='<div class="bx" style="border-left:3px solid '+g.color+'"><h3>📊 '+g.label+' '+t('utilTitle')+'</h3>';
+    h+='<canvas id="utilChart_'+g.key+'"></canvas></div>';
+  });
+  return h;
+}
+
+function initUtilCharts(){
+  if(!D||!D.lossDates||!D.lossDates.length)return;
+  var dates=D.lossDates;
+  var lineGroups=[
+    {key:'Total',color:'#f87171'},
+    {key:'K1',color:'#3b82f6'},
+    {key:'K2',color:'#8b5cf6'},
+    {key:'G',color:'#06b6d4'},
+    {key:'H',color:'#22c55e'},
+    {key:'E',color:'#f59e0b'}
+  ];
+  lineGroups.forEach(function(g){
+    var canvas=document.getElementById('utilChart_'+g.key);
+    if(!canvas)return;
+    var data=dates.map(function(dt){
+      var dd=D.lossByLineDate[dt]&&D.lossByLineDate[dt][g.key];
+      return dd&&dd.u>0?Math.round(dd.u*10000)/100:null;
+    });
+    var ch=new Chart(canvas,{type:'line',
+      data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),
+        datasets:[
+          {label:g.key+' '+t('utilRate'),data:data,borderColor:g.color,backgroundColor:g.color+'20',pointRadius:3,tension:0.3,fill:true,spanGaps:true},
+          {label:t('utilTarget')+'(90%)',data:dates.map(function(){return 90;}),borderColor:'#f59e0b',borderDash:[5,5],pointRadius:0,tension:0}
+        ]},
+      options:{responsive:true,maintainAspectRatio:true,aspectRatio:3,
+        plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}}}},
+        scales:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'#1f2937'}},
+          y:{ticks:{color:'#94a3b8',font:{size:10},callback:function(v){return v+'%'}},grid:{color:'#1f2937'},min:0,max:120,
+            title:{display:true,text:t('utilRate')+'(%)',color:'#64748b',font:{size:10}}}}}});
+    charts.push(ch);
+  });
+}
+// ===================== 가동율 끝 =====================
+
 function renderAll(){
   charts.forEach(function(c){try{c.destroy()}catch(e){}});charts=[];
   if(!D)return;
@@ -1321,16 +1428,18 @@ function renderAll(){
   document.getElementById('tabArea').innerHTML=
     '<div class="tab on" onclick="go(0)">📉 '+t('tabLoss')+'</div>'+
     '<div class="tab" onclick="go(1)">📋 '+t('tabStop')+'</div>'+
-    '<div class="tab" onclick="go(2)">📅 '+t('tabDaily')+'</div>'+
-    '<div class="tab" onclick="go(3)">🔥 '+t('tabDefHm')+'</div>'+
-    '<div class="tab" onclick="go(4)">🔥 '+t('tabStopHm')+'</div>'+
-    '<div class="tab" onclick="go(5)">⏱ '+t('tabST')+'</div>';
+    '<div class="tab" onclick="go(2)">📊 '+t('tabUtil')+'</div>'+
+    '<div class="tab" onclick="go(3)">⏱ '+t('tabDaily')+'</div>'+
+    '<div class="tab" onclick="go(4)">🔥 '+t('tabDefHm')+'</div>'+
+    '<div class="tab" onclick="go(5)">🔥 '+t('tabStopHm')+'</div>'+
+    '<div class="tab" onclick="go(6)">⚙ '+t('tabST')+'</div>';
 
   var legend='<div class="lg"><div class="li"><div class="lc" style="background:#0a0a0a;border:1px solid #1a1a1a"></div>0</div><div class="li"><div class="lc" style="background:rgba(59,130,246,0.3)"></div>Low</div><div class="li"><div class="lc" style="background:rgba(251,191,36,0.5)"></div>Mid</div><div class="li"><div class="lc" style="background:rgba(239,68,68,0.7)"></div>High</div></div>';
 
   document.getElementById('root').innerHTML=
   '<div class="pn on" id="lossPanel">'+buildLossPage()+'</div>'+
   '<div class="pn" id="summaryPanel">'+buildSummaryPage()+'</div>'+
+  '<div class="pn" id="utilPanel">'+buildUtilPage()+'</div>'+
   '<div class="pn">'+
     '<div class="bx"><h3>📅 '+t('allDaily')+'<em>Total '+D.totalRec.toLocaleString()+t('items')+'</em></h3><canvas id="dAll"></canvas></div>'+
     '<div class="bx"><h3>📊 '+t('allStopVs')+'</h3><div class="hc" id="tAllS"></div></div>'+
@@ -1364,9 +1473,10 @@ function renderAll(){
   charts.push(makeDailyChart('dK', D.daily_K, 'K Line', '#f59e0b', 'K', fixedTime, fixedQty));
   document.getElementById('tKS').innerHTML=buildStopTableWide(D.daily_K);
 
-  document.getElementById('hm_def').innerHTML=buildDailyHT(D.hm_def,'불량수량',D.eq_order,D.all_dates);
-  document.getElementById('hm_time').innerHTML=buildDailyHT(D.hm_time,'time',D.eq_order,D.all_dates);
+  document.getElementById('hm_def').innerHTML=buildDailyHT(D.hm_def,'불량수량',D.eq_order,D.all_dates,false);
+  document.getElementById('hm_time').innerHTML=buildDailyHT(D.hm_time,'time',D.eq_order,D.all_dates,true);
   initLossChart();
+  initUtilCharts();
 }
 
 var ST_EQ_LIST=['K07','K08','K09','K10','K11','K12','K13','K14','H01','H02','H03','H04','H07','H08','H09','H10','G15','G16','G17','G18'];
