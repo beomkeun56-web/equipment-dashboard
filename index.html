@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>설비조정이력 분析 v3.2</title>
+<title>설비조정이력 분析 v3.3</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -84,7 +84,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd">
-<h1>📊 설비조정이력 분析 v3.2</h1>
+<h1>📊 설비조정이력 분析 v3.3</h1>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
 <div class="file-bar">
@@ -112,6 +112,7 @@ PM调整 데이터를 자동 분석합니다</p>
 
 <script>
 let D=null, charts=[];
+var DATA_VERSION='3.3'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 function handleFile(input){
   var file=input.files[0]; if(!file)return;
@@ -191,6 +192,7 @@ function processWorkbook(wb){
     return'';
   }
   var prodByDateEq={}, eqStRaw={}, dateToWeek={}, eqDates={}, eqWeekDates={};
+  var _dbgAllSheets=wb.SheetNames.slice(); // 전체 시트명 복사
   var _dbgSheets=[],_dbgRows=0; // 디버그용
   for(var ni=0;ni<wb.SheetNames.length;ni++){
     var nsn=wb.SheetNames[ni];
@@ -330,7 +332,8 @@ function processWorkbook(wb){
     prodByDateEq:prodByDateEq,stopByDateEq:stopByDateEq,avgEqST:avgEqST,stDates:stDates,
     prodByWeekEq:prodByWeekEq,stopByWeekEq:stopByWeekEq,weekList:weekList,
     prodTotalEq:prodTotalEq,stopTotalEq:stopTotalEq,eqDates:eqDates,eqWeekDates:eqWeekDates,
-    _dbg:{sheets:wb.SheetNames,matchedSheets:_dbgSheets,rows:_dbgRows,dates:Object.keys(prodByDateEq).length,weeks:weekList.length,eqs:Object.keys(prodTotalEq).filter(function(e){return(prodTotalEq[e]||0)>0})}
+    dataVersion:DATA_VERSION,
+    _dbg:{sheets:_dbgAllSheets,matchedSheets:_dbgSheets,rows:_dbgRows,dates:Object.keys(prodByDateEq).length,weeks:weekList.length,eqs:Object.keys(prodTotalEq).filter(function(e){return(prodTotalEq[e]||0)>0})}
   };
 }
 
@@ -1000,14 +1003,21 @@ function clearData(){
   try{
     var saved=localStorage.getItem('dashData');
     if(saved){
-      D=JSON.parse(saved);
-      var fn=localStorage.getItem('dashFile')||'저장된 데이터';
-      document.getElementById('tabArea').style.display='';
-      renderAll();
-      document.getElementById('fileName').textContent='현재: '+fn;
-      document.getElementById('fileStatus').textContent='✓ 저장됨 ('+D.totalRec.toLocaleString()+'건)';
-      document.getElementById('fileStatus').style.color='#22c55e';
-      document.getElementById('clearBtn').style.display='';
+      var parsed=JSON.parse(saved);
+      // 버전이 다르면 캐시 삭제 후 재업로드 요청
+      if(parsed.dataVersion!==DATA_VERSION){
+        localStorage.removeItem('dashData');localStorage.removeItem('dashFile');
+        document.getElementById('root').innerHTML='<div class="welcome"><div class="arrow">👆</div><h2>업데이트됨 — 파일을 다시 업로드해 주세요</h2><p style="color:#f59e0b">대시보드가 업데이트(v'+DATA_VERSION+')되어 파일을 다시 불러와야 합니다.</p></div>';
+      } else {
+        D=parsed;
+        var fn=localStorage.getItem('dashFile')||'저장된 데이터';
+        document.getElementById('tabArea').style.display='';
+        renderAll();
+        document.getElementById('fileName').textContent='현재: '+fn;
+        document.getElementById('fileStatus').textContent='✓ 저장됨 ('+D.totalRec.toLocaleString()+'건)';
+        document.getElementById('fileStatus').style.color='#22c55e';
+        document.getElementById('clearBtn').style.display='';
+      }
     }
   }catch(e){localStorage.removeItem('dashData')}
 })();
