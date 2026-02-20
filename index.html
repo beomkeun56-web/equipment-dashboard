@@ -228,7 +228,30 @@ function processWorkbook(wb){
   var avgEqST={};
   Object.keys(eqStRaw).forEach(function(eq){if(eqStRaw[eq].n>0)avgEqST[eq]=eqStRaw[eq].s/eqStRaw[eq].n});
   var stDates=Object.keys(prodByDateEq).sort();
-  // 주차별 집계
+  // 병합셀로 누락된 주차를 ISO 주차로 보완
+  (function(){
+    function isoWeek(ds){
+      var d=new Date(ds+'T00:00:00');
+      if(isNaN(d.getTime()))return'';
+      d.setDate(d.getDate()+3-(d.getDay()+6)%7);
+      var w1=new Date(d.getFullYear(),0,4);
+      return String(1+Math.round(((d.getTime()-w1.getTime())/86400000-3+(w1.getDay()+6)%7)/7));
+    }
+    Object.keys(prodByDateEq).forEach(function(dt){
+      if(!dateToWeek[dt]){var w=isoWeek(dt);if(w)dateToWeek[dt]=w;}
+    });
+  })();
+  // eqWeekDates 재구성 (dateToWeek 보완 후)
+  eqWeekDates={};
+  Object.keys(prodByDateEq).forEach(function(dt){
+    var wk=dateToWeek[dt]; if(!wk)return;
+    Object.keys(prodByDateEq[dt]).forEach(function(eq){
+      if(!eqWeekDates[wk])eqWeekDates[wk]={};
+      if(!eqWeekDates[wk][eq])eqWeekDates[wk][eq]={};
+      eqWeekDates[wk][eq][dt]=1;
+    });
+  });
+  // 주차별/누적 집계
   var prodByWeekEq={},stopByWeekEq={},prodTotalEq={},stopTotalEq={};
   Object.keys(prodByDateEq).forEach(function(dt){
     var wk=dateToWeek[dt];
@@ -883,6 +906,11 @@ function buildSTAnalysisPage(key,viewType){
   var onStyle=';background:#3b82f6;color:#fff;border-color:#3b82f6';
   var offStyle=';background:#1a1a1a;color:#94a3b8';
   var h='<div class="bx"><h3>⏱ 시간대비분析</h3>';
+  // 데이터 현황 요약
+  var totalDays=D.stDates?D.stDates.length:0;
+  var totalWeeks=D.weekList?D.weekList.length:0;
+  var totalEqs=Object.keys(D.prodTotalEq||{}).filter(function(e){return(D.prodTotalEq[e]||0)>0}).length;
+  h+='<div style="font-size:11px;color:#64748b;margin-bottom:10px">데이터: <span style="color:#60a5fa">'+totalDays+'일</span> | <span style="color:#a78bfa">'+totalWeeks+'주차</span> | <span style="color:#34d399">설비 '+totalEqs+'대</span></div>';
   // 뷰 선택 버튼
   h+='<div style="display:flex;gap:6px;margin-bottom:12px">';
   h+='<button style="'+btnStyle+(viewType==='daily'?onStyle:offStyle)+'" onclick="renderSTAnalysis(\''+(D.stDates.length?D.stDates[D.stDates.length-1]:'')+'\',\'daily\')">일자별</button>';
