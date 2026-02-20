@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v4.2</title>
+<title>Production Performance v4.3</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -84,7 +84,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd">
-<h1>📊 Production Performance v4.2</h1>
+<h1>📊 Production Performance v4.3</h1>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
 <div class="file-bar">
@@ -112,7 +112,7 @@ PM调整 데이터를 자동 분석합니다</p>
 
 <script>
 let D=null, charts=[];
-var DATA_VERSION='4.2'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='4.3'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 function handleFile(input){
   var file=input.files[0]; if(!file)return;
@@ -182,17 +182,18 @@ function processWorkbook(wb){
     }
   }
   var _dbgAllSheets=wb.SheetNames.slice();
-  // === 일간 LOSS 현황 (日별汇總) - allRows 체크 전에 먼저 읽기 ===
+  // === 일간 LOSS 현황 - 시트명 대신 내용으로 식별 (col[2]에 'Total'이 있는 시트) ===
   var lossByLineDate={},lossAccumByLine={},lossDates=[];
-  console.log('[LOSS] 전체 시트:', wb.SheetNames);
   for(var xi=0;xi<wb.SheetNames.length;xi++){
     var xsn=wb.SheetNames[xi];
-    var xsnHex=Array.from(xsn).map(function(c){return'U+'+c.charCodeAt(0).toString(16).toUpperCase()}).join(' ');
-    console.log('[LOSS] 시트 체크:', xsn, xsnHex);
-    if(xsn.indexOf('\u65E5\u522B\u6C47\u603B')===-1&&xsn.indexOf('\u65E5\u5225\u6C47\u603B')===-1&&xsn.indexOf('\u6C47\u603B')===-1)continue;
-    console.log('[LOSS] 시트 매칭됨:', xsn);
     var rawX=XLSX.utils.sheet_to_json(wb.Sheets[xsn],{header:1,defval:null,raw:true});
-    console.log('[LOSS] 총 행수:', rawX.length);
+    if(!rawX||rawX.length<6)continue;
+    // 'Total'이 col[2]에 있는 시트 = 日别汇总
+    var isSummarySheet=false;
+    for(var xc=1;xc<Math.min(rawX.length,30);xc++){
+      if(rawX[xc]&&(rawX[xc][2]||'').toString().trim()==='Total'){isSummarySheet=true;break;}
+    }
+    if(!isSummarySheet)continue;
     var lastXDate=null;
     for(var xr=1;xr<rawX.length;xr++){
       var rx=rawX[xr];if(!rx)continue;
@@ -200,8 +201,8 @@ function processWorkbook(wb){
       if(!lastXDate)continue;
       var rline=(rx[2]||'').toString().trim();if(!rline)continue;
       var rprod=typeof rx[7]==='number'?rx[7]:(parseFloat(rx[7])||0);
-      var rkpi=typeof rx[16]==='number'?rx[16]:(parseFloat(rx[16])||0);   // col[16]=KPI Loss 废弃数(개수, 누적계산용)
-      var rloss=typeof rx[17]==='number'?rx[17]:(parseFloat(rx[17])||0);  // col[17]=KPI Loss 비율(decimal, 표시용)
+      var rkpi=typeof rx[16]==='number'?rx[16]:(parseFloat(rx[16])||0);
+      var rloss=typeof rx[17]==='number'?rx[17]:(parseFloat(rx[17])||0);
       if(!lossByLineDate[lastXDate])lossByLineDate[lastXDate]={};
       lossByLineDate[lastXDate][rline]={r:rloss,p:rprod};
       if(!lossAccumByLine[rline])lossAccumByLine[rline]={prod:0,loss:0};
