@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v6.6</title>
+<title>Production Performance v6.7</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v6.6</h1>
+<h1>📊 Production Performance v6.7</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -396,7 +396,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='6.6'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='6.7'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 function handleFile(input){
   var file=input.files[0]; if(!file)return;
@@ -503,12 +503,12 @@ function processWorkbook(wb){
       if(rx[0]!=null){var ndx=parseStDate(rx[0]);if(ndx)lastXDate=ndx;else lastXDate=null;}
       if(!lastXDate)continue;
       var rline=(rx[1]||'').toString().trim();if(!rline)continue;
-      if(_lossDbg.rows===0){_lossDbg.sample='date='+lastXDate+' line='+rline+' col6='+rx[6]+' col10='+rx[10]+' col16='+rx[16];console.log('[日别汇总 첫데이터] '+_lossDbg.sample);}
+      if(_lossDbg.rows===0){_lossDbg.sample='date='+lastXDate+' line='+rline+' col6='+rx[6]+' col9(稼动率)='+rx[9]+' col16='+rx[16];console.log('[日别汇总 첫데이터] '+_lossDbg.sample);}
       _lossDbg.rows++;
       var rprod=typeof rx[6]==='number'?rx[6]:(parseFloat(rx[6])||0);
       var rkpi=typeof rx[15]==='number'?rx[15]:(parseFloat(rx[15])||0);
       var rloss=typeof rx[16]==='number'?rx[16]:(parseFloat(rx[16])||0);
-      var rutil=typeof rx[10]==='number'?rx[10]:(parseFloat(rx[10])||0);
+      var rutil=typeof rx[9]==='number'?rx[9]:(parseFloat(rx[9])||0);
       if(rloss>=1.0)continue;
       if(!lossByLineDate[lastXDate])lossByLineDate[lastXDate]={};
       lossByLineDate[lastXDate][rline]={r:rloss,p:rprod,u:rutil};
@@ -1494,7 +1494,10 @@ function initUtilCharts(){
     if(!canvas)return;
     var data=dates.map(function(dt){
       var dd=D.lossByLineDate[dt]&&D.lossByLineDate[dt][g.key];
-      return dd&&dd.u>0?Math.round(dd.u*10000)/100:null;
+      if(!dd||!dd.u||dd.u<=0)return null;
+      // 소수(0.85)면 ×100, 이미 백분율(85.5)이면 그대로
+      var uv=dd.u>1?dd.u:dd.u*100;
+      return Math.round(uv*100)/100;
     });
     var ch=new Chart(canvas,{type:'line',
       data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),
