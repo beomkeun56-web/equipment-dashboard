@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v6.0</title>
+<title>Production Performance v6.1</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v6.0</h1>
+<h1>📊 Production Performance v6.1</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -396,7 +396,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='6.0'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='6.1'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 function handleFile(input){
   var file=input.files[0]; if(!file)return;
@@ -548,36 +548,29 @@ function processWorkbook(wb){
     var nsn=_niboSheets[ni];
     _dbgSheets.push(nsn);
     var raw2=XLSX.utils.sheet_to_json(wb.Sheets[nsn],{header:1,defval:null,raw:true});
-    // 헤더에서 컬럼 인덱스 동적 감지
-    var _colProd=-1,_colST=-1,_colDate=-1,_colWeek=-1,_colEq=-1,_lossStart=-1;
+    // PM调整 시작 컬럼만 동적 감지 (나머지는 검증된 고정값 사용)
+    var _lossStart=-1;
     var _lossKeys=['PM调整','PM조정','PM調整'];
     for(var hr=0;hr<Math.min(raw2.length,5);hr++){
       var hrow=raw2[hr];if(!hrow)continue;
       for(var hc=0;hc<hrow.length;hc++){
         var hv=(hrow[hc]||'').toString().trim();
-        if(!hv)continue;
-        if(hv==='日期'||hv==='날짜')_colDate=hc;
-        if(hv==='周'||hv==='주차'||hv==='周次')_colWeek=hc;
-        if(hv==='设备'||hv==='설비'||hv==='設備')_colEq=hc;
-        if(hv.indexOf('生産')>=0||hv.indexOf('生产')>=0||hv.indexOf('생산')>=0)if(_colProd<0)_colProd=hc;
-        if(hv==='S/T'||hv==='ST'||hv==='s/t')_colST=hc;
-        if(_lossStart<0){for(var lk=0;lk<_lossKeys.length;lk++){if(hv.indexOf(_lossKeys[lk])>=0){_lossStart=hc;break;}}}
+        if(_lossStart<0&&hv){for(var lk=0;lk<_lossKeys.length;lk++){if(hv.indexOf(_lossKeys[lk])>=0){_lossStart=hc;break;}}}
       }
+      if(_lossStart>=0)break;
     }
-    // 감지 실패 시 기본값
-    if(_colDate<0)_colDate=3;if(_colWeek<0)_colWeek=2;if(_colEq<0)_colEq=4;
-    if(_colProd<0)_colProd=11;if(_colST<0)_colST=12;if(_lossStart<0)_lossStart=24;
-    var lastDate2=null,lastWeek2=null; // 병합셀 전파용
+    if(_lossStart<0)_lossStart=24;
+    console.log('[日报 '+nsn+'] PM调整 컬럼='+_lossStart+', 헤더row0='+(raw2[0]?raw2[0].slice(0,15).map(function(v){return String(v||'').substring(0,8)}).join('|'):''));
+    var lastDate2=null,lastWeek2=null;
     for(var j=2;j<raw2.length;j++){
       var rj=raw2[j]; if(!rj)continue;
-      // 병합셀 처리: 값이 있을 때만 갱신, 없으면 이전 값 유지
-      if(rj[_colDate]!=null){var nd2=parseStDate(rj[_colDate]);if(nd2)lastDate2=nd2;else lastDate2=null;}
-      if(rj[_colWeek]!=null){var nw2=(rj[_colWeek]||'').toString().trim();if(nw2)lastWeek2=nw2;}
-      if(!lastDate2||!rj[_colEq])continue;
+      if(rj[3]!=null){var nd2=parseStDate(rj[3]);if(nd2)lastDate2=nd2;else lastDate2=null;}
+      if(rj[2]!=null){var nw2=(rj[2]||'').toString().trim();if(nw2)lastWeek2=nw2;}
+      if(!lastDate2||!rj[4])continue;
       var ds2=lastDate2;
-      var eq2=(rj[_colEq]||'').toString().trim().toUpperCase(); if(!eq2)continue;
-      var prod2=typeof rj[_colProd]==='number'?rj[_colProd]:(parseFloat(rj[_colProd])||0);
-      var st2=typeof rj[_colST]==='number'?rj[_colST]:(parseFloat(rj[_colST])||0);
+      var eq2=(rj[4]||'').toString().trim().toUpperCase(); if(!eq2)continue;
+      var prod2=typeof rj[11]==='number'?rj[11]:(parseFloat(rj[11])||0);
+      var st2=typeof rj[12]==='number'?rj[12]:(parseFloat(rj[12])||0);
       var wk2=lastWeek2||'';
       if(!prodByDateEq[ds2])prodByDateEq[ds2]={};
       prodByDateEq[ds2][eq2]=(prodByDateEq[ds2][eq2]||0)+prod2;
