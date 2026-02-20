@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>설비조정이력 분析 v3.1</title>
+<title>설비조정이력 분析 v3.2</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -84,7 +84,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd">
-<h1>📊 설비조정이력 분析 v3.1</h1>
+<h1>📊 설비조정이력 분析 v3.2</h1>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
 <div class="file-bar">
@@ -191,9 +191,12 @@ function processWorkbook(wb){
     return'';
   }
   var prodByDateEq={}, eqStRaw={}, dateToWeek={}, eqDates={}, eqWeekDates={};
+  var _dbgSheets=[],_dbgRows=0; // 디버그용
   for(var ni=0;ni<wb.SheetNames.length;ni++){
     var nsn=wb.SheetNames[ni];
-    if(nsn.indexOf('日报')===-1)continue;
+    // 간체(日报)와 번체(日報) 모두 매칭
+    if(nsn.indexOf('日报')===-1 && nsn.indexOf('日報')===-1)continue;
+    _dbgSheets.push(nsn);
     var raw2=XLSX.utils.sheet_to_json(wb.Sheets[nsn],{header:1,defval:null,raw:true});
     var lastDate2=null,lastWeek2=null; // 병합셀 전파용
     for(var j=2;j<raw2.length;j++){
@@ -213,12 +216,14 @@ function processWorkbook(wb){
       if(wk2&&!dateToWeek[ds2])dateToWeek[ds2]=wk2;
       if(!eqDates[eq2])eqDates[eq2]={};eqDates[eq2][ds2]=1;
       if(wk2){if(!eqWeekDates[wk2])eqWeekDates[wk2]={};if(!eqWeekDates[wk2][eq2])eqWeekDates[wk2][eq2]={};eqWeekDates[wk2][eq2][ds2]=1;}
+      _dbgRows++;
     }
   }
   var stopByDateEq={};
   for(var ki=0;ki<wb.SheetNames.length;ki++){
     var ksn=wb.SheetNames[ki];
-    if(ksn.indexOf('调整履历')===-1)continue;
+    // 간체(调整履历)와 번체(調整履歴) 모두 매칭
+    if(ksn.indexOf('调整履历')===-1 && ksn.indexOf('調整履歴')===-1 && ksn.indexOf('履历')===-1 && ksn.indexOf('履歴')===-1)continue;
     var raw3=XLSX.utils.sheet_to_json(wb.Sheets[ksn],{header:1,defval:null,raw:true});
     var lastDate3=null; // 병합셀 전파용
     for(var k=2;k<raw3.length;k++){
@@ -324,7 +329,8 @@ function processWorkbook(wb){
     lineSummary:lineSummary,
     prodByDateEq:prodByDateEq,stopByDateEq:stopByDateEq,avgEqST:avgEqST,stDates:stDates,
     prodByWeekEq:prodByWeekEq,stopByWeekEq:stopByWeekEq,weekList:weekList,
-    prodTotalEq:prodTotalEq,stopTotalEq:stopTotalEq,eqDates:eqDates,eqWeekDates:eqWeekDates
+    prodTotalEq:prodTotalEq,stopTotalEq:stopTotalEq,eqDates:eqDates,eqWeekDates:eqWeekDates,
+    _dbg:{sheets:wb.SheetNames,matchedSheets:_dbgSheets,rows:_dbgRows,dates:Object.keys(prodByDateEq).length,weeks:weekList.length,eqs:Object.keys(prodTotalEq).filter(function(e){return(prodTotalEq[e]||0)>0})}
   };
 }
 
@@ -914,6 +920,17 @@ function buildSTAnalysisPage(key,viewType){
   var onStyle=';background:#3b82f6;color:#fff;border-color:#3b82f6';
   var offStyle=';background:#1a1a1a;color:#94a3b8';
   var h='<div class="bx"><h3>⏱ 시간대비분析</h3>';
+  // 디버그 패널
+  var dbg=D._dbg||{};
+  var dbgColor=dbg.rows>0?'#166534':'#7f1d1d';
+  var dbgBg=dbg.rows>0?'#052e16':'#2d0d0d';
+  h+='<details style="margin-bottom:10px"><summary style="cursor:pointer;font-size:11px;color:#94a3b8">🔍 데이터 진단 (클릭해서 펼치기)</summary>';
+  h+='<div style="background:'+dbgBg+';border:1px solid '+dbgColor+';border-radius:6px;padding:8px;font-size:11px;font-family:monospace;color:#d1fae5;margin-top:4px;word-break:break-all">';
+  h+='전체 시트: ['+((dbg.sheets||[]).join(', '))+']<br>';
+  h+='매칭된 日报 시트: ['+((dbg.matchedSheets||[]).join(', '))+']<br>';
+  h+='처리된 행수: <b>'+( dbg.rows||0)+'</b> | 날짜수: <b>'+(dbg.dates||0)+'</b> | 주차수: <b>'+(dbg.weeks||0)+'</b><br>';
+  h+='생산설비: ['+(dbg.eqs||[]).join(', ')+']';
+  h+='</div></details>';
   // 데이터 현황 요약
   var totalDays=D.stDates?D.stDates.length:0;
   var totalWeeks=D.weekList?D.weekList.length:0;
