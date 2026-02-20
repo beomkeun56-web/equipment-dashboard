@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>설비조정이력 분析 v3.3</title>
+<title>설비조정이력 분析 v3.4</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -84,7 +84,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd">
-<h1>📊 설비조정이력 분析 v3.3</h1>
+<h1>📊 설비조정이력 분析 v3.4</h1>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
 <div class="file-bar">
@@ -112,7 +112,7 @@ PM调整 데이터를 자동 분석합니다</p>
 
 <script>
 let D=null, charts=[];
-var DATA_VERSION='3.3'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='3.4'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 function handleFile(input){
   var file=input.files[0]; if(!file)return;
@@ -851,8 +851,11 @@ function renderAll(){
 }
 
 var ST_EQ_LIST=['K07','K08','K09','K10','K11','K12','K13','K14','H01','H02','H03','H04','H07','H08','H09','H10','G15','G16','G17','G18'];
+var customST={}; // 사용자 직접 입력 S/T (설비별 override)
+var _stKey='', _stView='daily';
 
 function getSTActual(eq){
+  if(customST[eq]>0)return customST[eq]; // 사용자 입력값 우선
   if(eq==='K13'||eq==='K14')return 1.85;
   if(eq[0]==='H')return 3.75;
   var avgST=(D.avgEqST||{})[eq]||0; if(!avgST)return null;
@@ -860,9 +863,24 @@ function getSTActual(eq){
   return avgST/2;
 }
 
-function buildSTTable(prod,stop,getCapaFn){
+function setCustomST(eq,val){
+  var v=parseFloat(val);
+  if(v>0)customST[eq]=v; else delete customST[eq];
+  var panel=document.getElementById('stAnalysisPanel');
+  if(panel)panel.innerHTML=buildSTAnalysisPage(_stKey,_stView);
+}
+
+function resetCustomST(){
+  customST={};
+  var panel=document.getElementById('stAnalysisPanel');
+  if(panel)panel.innerHTML=buildSTAnalysisPage(_stKey,_stView);
+}
+
+function buildSTTable(prod,stop,getCapaFn,editable){
   function concluCell(v){if(!v)return'<td></td>';if(v==='정상')return'<td class="good">정상</td>';return'<td class="bad">'+v+'</td>'}
   function diffCell(v){if(v===null||v===undefined)return'<td></td>';var s=(v>=0?'+':'')+Math.round(v).toLocaleString();return'<td style="color:'+(v>=0?'#22c55e':'#ef4444')+';font-weight:700">'+s+'</td>'}
+  var inpStyle='width:68px;background:#0f172a;color:#e2e8f0;border:1px solid #3b82f6;border-radius:4px;padding:2px 5px;font-size:12px;text-align:right';
+  var inpStyleMod='width:68px;background:#1c1917;color:#fcd34d;border:1px solid #f59e0b;border-radius:4px;padding:2px 5px;font-size:12px;text-align:right;font-weight:700';
   var sumCapa=0,sumProd=0,sumStop=0,sumStopQty=0,rows=[];
   ST_EQ_LIST.forEach(function(eq){
     var stA=getSTActual(eq); if(!stA)return;
@@ -876,12 +894,13 @@ function buildSTTable(prod,stop,getCapaFn){
     var diff=production-capa;
     var cvDiff=diff>0?diff-stopQty:diff+stopQty;
     var conclu=Math.abs(cvDiff)>500?(diff>0?'S/T 이상':'기록이상'):'정상';
+    var isModified=customST[eq]>0;
     sumCapa+=capa;sumProd+=production;sumStop+=stopTime;sumStopQty+=stopQty;
-    rows.push({eq:eq,stA:stA,capa:capa,prod:production,rate:rate,diff:diff,stopTime:stopTime,stopQty:stopQty,cvDiff:cvDiff,conclu:conclu});
+    rows.push({eq:eq,stA:stA,capa:capa,prod:production,rate:rate,diff:diff,stopTime:stopTime,stopQty:stopQty,cvDiff:cvDiff,conclu:conclu,isModified:isModified});
   });
   var sumDiff=sumProd-sumCapa;
   var sumCvDiff=sumDiff>0?sumDiff-sumStopQty:sumDiff+sumStopQty;
-  var sumConclu=rows.length?( Math.abs(sumCvDiff)>500?(sumDiff>0?'S/T 이상':'기록이상'):'정상'):'';
+  var sumConclu=rows.length?(Math.abs(sumCvDiff)>500?(sumDiff>0?'S/T 이상':'기록이상'):'정상'):'';
   var h='<div class="hc"><table class="ht"><thead><tr>';
   h+='<th>설비</th><th>S/T실제(초)</th><th>Capa</th><th>생산량</th><th>가동율</th><th>차이</th><th>정지시간(분)</th><th>수량환산</th><th>환산차이</th><th>결론</th>';
   h+='</tr></thead><tbody>';
@@ -904,7 +923,13 @@ function buildSTTable(prod,stop,getCapaFn){
       lastLine=curLine;
     }
     h+='<tr><th style="color:#93c5fd">'+r.eq+'</th>';
-    h+='<td>'+r.stA.toFixed(3)+'</td><td>'+Math.round(r.capa).toLocaleString()+'</td>';
+    if(editable){
+      var iStyle=r.isModified?inpStyleMod:inpStyle;
+      h+='<td><input type="number" step="0.001" min="0.001" value="'+r.stA.toFixed(3)+'" style="'+iStyle+'" onchange="setCustomST(\''+r.eq+'\',this.value)" title="'+(r.isModified?'수정됨 (더블클릭→초기화)':'S/T 직접 입력')+'" ondblclick="setCustomST(\''+r.eq+'\',\'\')"></td>';
+    } else {
+      h+='<td>'+(r.isModified?'<span style="color:#fcd34d;font-weight:700">'+r.stA.toFixed(3)+'✎</span>':r.stA.toFixed(3))+'</td>';
+    }
+    h+='<td>'+Math.round(r.capa).toLocaleString()+'</td>';
     h+='<td>'+(r.prod>0?Math.round(r.prod).toLocaleString():'<span style="color:#4b5563">0</span>')+'</td>';
     h+='<td>'+(r.rate>0?(r.rate*100).toFixed(1)+'%':'')+'</td>';
     h+=diffCell(r.diff);
@@ -976,16 +1001,24 @@ function buildSTAnalysisPage(key,viewType){
     h+='<div style="padding:30px;text-align:center;color:#94a3b8">⚠ 생산 데이터 없음 — 日报 시트가 있는 파일을 업로드하세요</div></div>';
     return h;
   }
-  h+='<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">기준: <strong style="color:#e2e8f0">'+subtitle+'</strong></div>';
-  h+=buildSTTable(prod,stop,getCapaFn);
+  var hasMod=Object.keys(customST).length>0;
+  h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">';
+  h+='<div style="font-size:12px;color:#94a3b8">기준: <strong style="color:#e2e8f0">'+subtitle+'</strong></div>';
+  if(viewType==='daily'){
+    h+='<div style="font-size:11px;color:#60a5fa">✎ S/T셀 직접 입력 가능 | 더블클릭→초기화</div>';
+    if(hasMod)h+='<button onclick="resetCustomST()" style="padding:3px 10px;font-size:11px;background:#7f1d1d;color:#fca5a5;border:1px solid #991b1b;border-radius:4px;cursor:pointer">S/T 전체 초기화</button>';
+  }
+  h+='</div>';
+  h+=buildSTTable(prod,stop,getCapaFn,viewType==='daily');
   h+='<div style="margin-top:8px;font-size:11px;color:#94a3b8">S/T실제: K07/K08/G=ST÷2, K09~K12=ST÷4, K13/K14=1.85초, H=3.75초 | 환산차이: 차이±수량환산 | 결론: |환산차이|>500 → 이상</div>';
   h+='</div>';
   return h;
 }
 
 function renderSTAnalysis(key,viewType){
+  _stKey=key; _stView=viewType||'daily';
   var panel=document.getElementById('stAnalysisPanel');
-  if(panel)panel.innerHTML=buildSTAnalysisPage(key,viewType||'daily');
+  if(panel)panel.innerHTML=buildSTAnalysisPage(_stKey,_stView);
 }
 
 function clearData(){
