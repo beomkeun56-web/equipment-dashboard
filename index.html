@@ -408,7 +408,7 @@ function handleFile(input){
   reader.onload=function(e){
     setTimeout(function(){
       try{
-        var wb=XLSX.read(e.target.result,{type:'array'});
+        var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
         var nd=processWorkbook(wb);
         if(nd){
           D=nd;
@@ -434,36 +434,28 @@ function handleFile(input){
 
 function processWorkbook(wb){
   var allRows=[];
-  var stopByDateEq={};
   for(var si=0;si<wb.SheetNames.length;si++){
     var sn=wb.SheetNames[si];
     if(sn.indexOf('调整履历')===-1)continue;
-    var raw=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:null,raw:true});
+    var raw=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:null,raw:false});
     if(raw.length<3)continue;
     for(var i=2;i<raw.length;i++){
       var r=raw[i]; if(!r||!r[3]||!r[4])continue;
+      var cat=(r[13]||'').toString().trim();
+      if(cat!=='PM调整')continue;
+      var sub=(r[14]||'').toString().trim();
+      if(sub==='停机'||sub==='开机'||!sub)continue;
       var dateStr=parseStDate(r[3]);
       if(!dateStr)continue;
-      var eq=(r[4]||'').toString().trim().toUpperCase();
-      if(!eq)continue;
-      var cat=(r[13]||'').toString().trim();
-      var sub=(r[14]||'').toString().trim();
-      var stopYN=(r[19]||'').toString().trim();
-      // stopByDateEq 집계 (停 판정 행)
-      if(stopYN==='停'){
-        var sm=typeof r[20]==='number'?r[20]:(parseFloat(r[20])||0);
-        if(!stopByDateEq[dateStr])stopByDateEq[dateStr]={};
-        stopByDateEq[dateStr][eq]=(stopByDateEq[dateStr][eq]||0)+sm;
-      }
-      if(cat!=='PM调整')continue;
-      if(sub==='停机'||sub==='开机'||!sub)continue;
       var dtParts=dateStr.split('-');
       var ds=dtParts[1]+'/'+dtParts[2];
-      var stopTime=typeof r[11]==='number'?r[11]:(parseFloat(r[11])||0);
-      var nonStopTime=typeof r[12]==='number'?r[12]:(parseFloat(r[12])||0);
+      var eq=(r[4]||'').toString().trim().toUpperCase();
+      if(!eq)continue;
+      var stopTime=parseFloat(r[11])||0, nonStopTime=parseFloat(r[12])||0;
       var time=Math.max(stopTime,nonStopTime);
       if(time>1000)continue;
-      var defect=typeof r[18]==='number'?r[18]:(parseFloat(r[18])||0);
+      var defect=parseFloat(r[18])||0;
+      var stopYN=(r[19]||'').toString().trim();
       var line=eq[0];
       var detail=(r[15]||'').toString().trim();
       allRows.push({ds:ds,eq:eq,sub:sub,detail:detail,defect:defect,time:time,stop:stopYN==='停',line:line,dateStr:dateStr});
@@ -475,10 +467,10 @@ function processWorkbook(wb){
   var _lossDbg={sheets:[],found:'없음',rows:0,sample:''};
   for(var xi=0;xi<wb.SheetNames.length;xi++){
     var xsn=wb.SheetNames[xi];
-    // 시트명 힌트: 日报/调整履历은 건너뜀 (불필요한 파싱 방지)
-    if(xsn.indexOf('日报')>=0||xsn.indexOf('日報')>=0||xsn.indexOf('调整履历')>=0||xsn.indexOf('調整履歴')>=0)continue;
+    if(xsn.indexOf('日报')>=0||xsn.indexOf('日報')>=0||xsn.indexOf('调整履历')>=0||xsn.indexOf('調整履歴')>=0||xsn.indexOf('履历')>=0||xsn.indexOf('履歴')>=0)continue;
     var rawX=XLSX.utils.sheet_to_json(wb.Sheets[xsn],{header:1,defval:null,raw:true});
     if(!rawX||rawX.length<6)continue;
+    // col[2]에 K1,K2,G,H,E,Total 중 하나가 있는 시트
     var lineVals=['K1','K2','G','H','E','Total'];
     var matchCount=0;
     for(var xc=1;xc<Math.min(rawX.length,30);xc++){
@@ -578,7 +570,25 @@ function processWorkbook(wb){
       _dbgRows++;
     }
   }
-  // stopByDateEq는 调整履历 파싱에서 이미 통합 수집됨
+  var stopByDateEq={};
+  for(var ki=0;ki<wb.SheetNames.length;ki++){
+    var ksn=wb.SheetNames[ki];
+    // 간체(调整履历)와 번체(調整履歴) 모두 매칭
+    if(ksn.indexOf('调整履历')===-1 && ksn.indexOf('調整履歴')===-1 && ksn.indexOf('履历')===-1 && ksn.indexOf('履歴')===-1)continue;
+    var raw3=XLSX.utils.sheet_to_json(wb.Sheets[ksn],{header:1,defval:null,raw:true});
+    var lastDate3=null; // 병합셀 전파용
+    for(var k=2;k<raw3.length;k++){
+      var rk=raw3[k]; if(!rk)continue;
+      if(rk[3]!=null){var nd3=parseStDate(rk[3]);if(nd3)lastDate3=nd3;}
+      if(!lastDate3||!rk[4])continue;
+      if((rk[19]||'').toString().trim()!=='停')continue;
+      var ds3=lastDate3;
+      var eq3=(rk[4]||'').toString().trim().toUpperCase(); if(!eq3)continue;
+      var sm=typeof rk[20]==='number'?rk[20]:(parseFloat(rk[20])||0);
+      if(!stopByDateEq[ds3])stopByDateEq[ds3]={};
+      stopByDateEq[ds3][eq3]=(stopByDateEq[ds3][eq3]||0)+sm;
+    }
+  }
   var avgEqST={};
   Object.keys(eqStRaw).forEach(function(eq){if(eqStRaw[eq].n>0)avgEqST[eq]=eqStRaw[eq].s/eqStRaw[eq].n});
   var stDates=Object.keys(prodByDateEq).sort();
@@ -641,7 +651,6 @@ function processWorkbook(wb){
     }
     return all_dates.map(function(d){return m[d]||{일자str:d,cnt:0,defect:0,time:0,stop:0}});
   }
-  // 라인별 사전 분류 (filter 반복 호출 제거)
   var rowsByLine={G:[],H:[],K:[]};
   for(var ri=0;ri<allRows.length;ri++){var rl=allRows[ri].line;if(rowsByLine[rl])rowsByLine[rl].push(allRows[ri]);}
   var daily=buildDaily(allRows);
