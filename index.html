@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v6.1</title>
+<title>Production Performance v6.2</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v6.1</h1>
+<h1>📊 Production Performance v6.2</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -396,7 +396,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='6.1'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='6.2'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 function handleFile(input){
   var file=input.files[0]; if(!file)return;
@@ -444,7 +444,7 @@ function processWorkbook(wb){
     var sn=wb.SheetNames[si];
     if(sn.indexOf('调整履历')>=0||sn.indexOf('調整履歴')>=0||sn.indexOf('履历')>=0||sn.indexOf('履歴')>=0){_adjSheets.push(sn);continue;}
     if(sn.indexOf('日报')>=0||sn.indexOf('日報')>=0){_niboSheets.push(sn);continue;}
-    if(sn.indexOf('日别汇总')>=0||sn.indexOf('日別匯總')>=0||sn.indexOf('日别')>=0){_lossSheet=sn;continue;}
+    if(sn.indexOf('日别汇总')>=0||sn.indexOf('日別匯總')>=0){_lossSheet=sn;continue;}
   }
   // === 调整履历: allRows + stopByDateEq 한번에 처리 ===
   for(var ai=0;ai<_adjSheets.length;ai++){
@@ -480,7 +480,18 @@ function processWorkbook(wb){
       allRows.push({ds:ds,eq:eq,sub:sub,detail:detail,defect:defect,time:time,stop:stopYN==='停',line:line,dateStr:dateStr});
     }
   }
-  // === 日别汇总: 이름매칭 → 바로 파싱 (불필요한 시트 파싱 제거) ===
+  // === 日别汇总: 이름매칭 → 바로 파싱 ===
+  // 이름 매칭 실패 시 col B에 K1/K2/G/H/E/Total 있는 시트 탐색
+  if(!_lossSheet){
+    for(var fi=0;fi<wb.SheetNames.length;fi++){
+      var fsn=wb.SheetNames[fi];
+      if(_adjSheets.indexOf(fsn)>=0||_niboSheets.indexOf(fsn)>=0)continue;
+      var fraw=XLSX.utils.sheet_to_json(wb.Sheets[fsn],{header:1,defval:null,raw:true,sheetRows:30});
+      if(!fraw||fraw.length<6)continue;
+      var fmc=0;for(var fc=1;fc<Math.min(fraw.length,30);fc++){var fv=(fraw[fc]&&fraw[fc][1]!=null)?(fraw[fc][1]||'').toString().trim():'';if(['K1','K2','G','H','E','Total'].indexOf(fv)>=0)fmc++;}
+      if(fmc>=3){_lossSheet=fsn;break;}
+    }
+  }
   if(_lossSheet&&wb.Sheets[_lossSheet]){
     var rawX=XLSX.utils.sheet_to_json(wb.Sheets[_lossSheet],{header:1,defval:null,raw:true});
     _lossDbg.found=_lossSheet;
