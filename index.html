@@ -740,7 +740,7 @@ function renderAll(){
     '<div class="tab" onclick="go(1)">📅 일자별 추이</div>'+
     '<div class="tab" onclick="go(2)">🔥 히트맵(불량/일자)</div>'+
     '<div class="tab" onclick="go(3)">🔥 히트맵(시간/일자)</div>'+
-    (D.stDates&&D.stDates.length?'<div class="tab" onclick="go(4)">⏱ 시간대비분析</div>':'');
+    '<div class="tab" onclick="go(4)">⏱ 시간대비분析</div>';
 
   var legend='<div class="lg"><div class="li"><div class="lc" style="background:#0a0a0a;border:1px solid #1a1a1a"></div>0</div><div class="li"><div class="lc" style="background:rgba(59,130,246,0.3)"></div>Low</div><div class="li"><div class="lc" style="background:rgba(251,191,36,0.5)"></div>Mid</div><div class="li"><div class="lc" style="background:rgba(239,68,68,0.7)"></div>High</div></div>';
 
@@ -761,7 +761,7 @@ function renderAll(){
   '</div>'+
   '<div class="pn"><div class="bx"><h3>🔥 설비 일자별 불량수량</h3>'+legend+'<div class="hc" id="hm_def"></div></div></div>'+
   '<div class="pn"><div class="bx"><h3>🔥 설비 일자별 조정시간(분)</h3>'+legend+'<div class="hc" id="hm_time"></div></div></div>'+
-  (D.stDates&&D.stDates.length?'<div class="pn" id="stAnalysisPanel">'+buildSTAnalysisPage(D.stDates[D.stDates.length-1])+'</div>':'');
+  '<div class="pn" id="stAnalysisPanel">'+(D.stDates&&D.stDates.length?buildSTAnalysisPage(D.stDates[D.stDates.length-1]):'<div style="padding:40px;text-align:center;color:#94a3b8"><p style="font-size:15px;color:#60a5fa;margin-bottom:12px">⚠ 생산 데이터 없음</p><p>이 탭은 <strong style="color:#e2e8f0">시간대비차이.xlsx</strong> 파일을 업로드해야 동작합니다<br><br>해당 파일에는 <code style="color:#93c5fd">N1 日报</code>, <code style="color:#93c5fd">N2 日报</code> 시트가 필요합니다</p></div>')+'</div>';
 
   // Render summary chart
   renderWorstWeekChart();
