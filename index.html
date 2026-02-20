@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v6.2</title>
+<title>Production Performance v6.3</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v6.2</h1>
+<h1>📊 Production Performance v6.3</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -396,7 +396,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='6.2'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='6.3'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 function handleFile(input){
   var file=input.files[0]; if(!file)return;
@@ -571,7 +571,10 @@ function processWorkbook(wb){
       if(_lossStart>=0)break;
     }
     if(_lossStart<0)_lossStart=24;
-    console.log('[日报 '+nsn+'] PM调整 컬럼='+_lossStart+', 헤더row0='+(raw2[0]?raw2[0].slice(0,15).map(function(v){return String(v||'').substring(0,8)}).join('|'):''));
+    console.log('[日报 '+nsn+'] PM调整 컬럼='+_lossStart+', 총컬럼수='+(raw2[0]?raw2[0].length:0));
+    for(var _dhi=0;_dhi<Math.min(raw2.length,4);_dhi++){var _dhr=raw2[_dhi];if(!_dhr)continue;var _dhv=[];for(var _dci=_lossStart;_dci<Math.min(_lossStart+13,_dhr.length);_dci++)_dhv.push('c'+_dci+':'+((_dhr[_dci]!=null)?String(_dhr[_dci]).substring(0,12):'NULL'));console.log('[日报 row'+_dhi+'] '+_dhv.join(' | '));}
+    // 첫번째 데이터행 전체 출력 (어느 컬럼에 뭐가 있는지 확인)
+    if(raw2[2]){var _fr=raw2[2],_fv=[];for(var _fi=0;_fi<Math.min(_fr.length,40);_fi++)_fv.push(_fi+':'+(_fr[_fi]!=null?String(_fr[_fi]).substring(0,10):'N'));console.log('[日报 데이터행2 전체] '+_fv.join(' | '));}
     var lastDate2=null,lastWeek2=null;
     for(var j=2;j<raw2.length;j++){
       var rj=raw2[j]; if(!rj)continue;
@@ -1302,7 +1305,9 @@ function buildLossDetail(){
     var d=dateData[eq],prod=d.prod||0;
     var stA=getSTActual(eq)||(d.st>0?d.st:0);
     var capa=stA>0?Math.round(86400/stA):0;
-    var lossR=capa>0?Math.max(0,(capa-prod)/capa):0;
+    // Loss율 = 13개 항목 합계 (엑셀 공식과 일치)
+    var lossSum=0;d.larr.forEach(function(v){lossSum+=v;});
+    var lossR=prod>0?lossSum/prod:0;
     if(lossR>colMaxLoss)colMaxLoss=lossR;
     d.larr.forEach(function(v,i){var pct=prod>0&&v>0?v/prod:0;if(pct>colMaxArr[i])colMaxArr[i]=pct;});
   });
@@ -1312,7 +1317,8 @@ function buildLossDetail(){
     var stA=getSTActual(eq)||(d.st>0?d.st:0);
     var capa=stA>0?Math.round(86400/stA):0;
     var util=capa>0?prod/capa:0;
-    var lossR=capa>0?Math.max(0,(capa-prod)/capa):0;
+    var lossSum=0;d.larr.forEach(function(v){lossSum+=v;});
+    var lossR=prod>0?lossSum/prod:0;
     totProd+=prod;totCapa+=capa;
     h+='<tr><td style="'+tdS+';'+stkL+'background:#0a0a0a;color:#93c5fd;font-weight:700;min-width:56px">'+eq+'</td>';
     h+='<td style="'+tdS+'">'+capa.toLocaleString()+'</td>';
@@ -1325,7 +1331,8 @@ function buildLossDetail(){
   });
   // Total 행
   var totUtil=totCapa>0?totProd/totCapa:0;
-  var totLoss=totCapa>0?Math.max(0,(totCapa-totProd)/totCapa):0;
+  var totLossSum=0;totLarr.forEach(function(v){totLossSum+=v;});
+  var totLoss=totProd>0?totLossSum/totProd:0;
   h+='<tr style="background:#1c2a3a;font-weight:700">';
   h+='<td style="'+tdS+';'+stkL+'background:#1c2a3a;color:#fcd34d;min-width:56px">'+t('total')+'</td>';
   h+='<td style="'+tdS+'">'+totCapa.toLocaleString()+'</td>';
