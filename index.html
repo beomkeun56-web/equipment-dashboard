@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v6.3</title>
+<title>Production Performance v6.4</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v6.3</h1>
+<h1>📊 Production Performance v6.4</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -396,7 +396,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='6.3'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='6.4'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 function handleFile(input){
   var file=input.files[0]; if(!file)return;
@@ -526,7 +526,7 @@ function processWorkbook(wb){
       prodByWeekEq:{},stopByWeekEq:{},weekList:[],
       prodTotalEq:{},stopTotalEq:{},eqDates:{},eqWeekDates:{},
       lossByLineDate:lossByLineDate,lossAccumByLine:lossAccumByLine,lossDates:lossDates,
-      lossDetailByDateEq:{},dataVersion:DATA_VERSION,_lossDbg:_lossDbg,
+      lossDetailByDateEq:{},lossDetailHeaders:_lossDetailHeaders,lossColCount:_lossColCount||13,dataVersion:DATA_VERSION,_lossDbg:_lossDbg,
       _dbg:{sheets:_dbgAllSheets,matchedSheets:[],rows:0,dates:0,weeks:0,eqs:[]}
     };
   }
@@ -554,27 +554,37 @@ function processWorkbook(wb){
   }
   var prodByDateEq={}, eqStRaw={}, dateToWeek={}, eqDates={}, eqWeekDates={};
   var lossDetailByDateEq={}; // 상세 Loss용 설비별 데이터
+  var _lossDetailHeaders=[]; // 日报에서 동적으로 읽은 실제 헤더
+  var _lossColCount=0; // 실제 Loss 상세 컬럼 수
   var _dbgSheets=[],_dbgRows=0; // 디버그용
   for(var ni=0;ni<_niboSheets.length;ni++){
     var nsn=_niboSheets[ni];
     _dbgSheets.push(nsn);
     var raw2=XLSX.utils.sheet_to_json(wb.Sheets[nsn],{header:1,defval:null,raw:true});
-    // PM调整 시작 컬럼만 동적 감지 (나머지는 검증된 고정값 사용)
-    var _lossStart=-1;
+    // PM调整 시작 컬럼 동적 감지 + 헤더 읽기
+    var _lossStart=-1,_lossHdrRow=-1;
     var _lossKeys=['PM调整','PM조정','PM調整'];
     for(var hr=0;hr<Math.min(raw2.length,5);hr++){
       var hrow=raw2[hr];if(!hrow)continue;
       for(var hc=0;hc<hrow.length;hc++){
         var hv=(hrow[hc]||'').toString().trim();
-        if(_lossStart<0&&hv){for(var lk=0;lk<_lossKeys.length;lk++){if(hv.indexOf(_lossKeys[lk])>=0){_lossStart=hc;break;}}}
+        if(_lossStart<0&&hv){for(var lk=0;lk<_lossKeys.length;lk++){if(hv.indexOf(_lossKeys[lk])>=0){_lossStart=hc;_lossHdrRow=hr;break;}}}
       }
       if(_lossStart>=0)break;
     }
     if(_lossStart<0)_lossStart=24;
-    console.log('[日报 '+nsn+'] PM调整 컬럼='+_lossStart+', 총컬럼수='+(raw2[0]?raw2[0].length:0));
-    for(var _dhi=0;_dhi<Math.min(raw2.length,4);_dhi++){var _dhr=raw2[_dhi];if(!_dhr)continue;var _dhv=[];for(var _dci=_lossStart;_dci<Math.min(_lossStart+13,_dhr.length);_dci++)_dhv.push('c'+_dci+':'+((_dhr[_dci]!=null)?String(_dhr[_dci]).substring(0,12):'NULL'));console.log('[日报 row'+_dhi+'] '+_dhv.join(' | '));}
-    // 첫번째 데이터행 전체 출력 (어느 컬럼에 뭐가 있는지 확인)
-    if(raw2[2]){var _fr=raw2[2],_fv=[];for(var _fi=0;_fi<Math.min(_fr.length,40);_fi++)_fv.push(_fi+':'+(_fr[_fi]!=null?String(_fr[_fi]).substring(0,10):'N'));console.log('[日报 데이터행2 전체] '+_fv.join(' | '));}
+    // 헤더 행에서 PM调整부터 연속된 텍스트 헤더를 읽어 실제 컬럼명 결정
+    if(_lossHdrRow>=0&&_lossDetailHeaders.length===0){
+      var _hdr=raw2[_lossHdrRow];
+      for(var _hi=_lossStart;_hi<_hdr.length;_hi++){
+        var _hv=(_hdr[_hi]!=null)?String(_hdr[_hi]).trim():'';
+        if(!_hv)break; // 빈 셀이 나오면 끝
+        _lossDetailHeaders.push(_hv);
+      }
+      _lossColCount=_lossDetailHeaders.length;
+      console.log('[日报 '+nsn+'] PM调整 컬럼='+_lossStart+', 동적헤더('+_lossColCount+'개)='+_lossDetailHeaders.join(','));
+    }
+    if(_lossColCount===0)_lossColCount=13;
     var lastDate2=null,lastWeek2=null;
     for(var j=2;j<raw2.length;j++){
       var rj=raw2[j]; if(!rj)continue;
@@ -592,13 +602,13 @@ function processWorkbook(wb){
       if(wk2&&!dateToWeek[ds2])dateToWeek[ds2]=wk2;
       if(!eqDates[eq2])eqDates[eq2]={};eqDates[eq2][ds2]=1;
       if(wk2){if(!eqWeekDates[wk2])eqWeekDates[wk2]={};if(!eqWeekDates[wk2][eq2])eqWeekDates[wk2][eq2]={};eqWeekDates[wk2][eq2][ds2]=1;}
-      // 상세 Loss: PM조정 컬럼부터 13개
-      var larr2=[];for(var lc0=_lossStart;lc0<_lossStart+13;lc0++)larr2.push(typeof rj[lc0]==='number'?rj[lc0]:(parseFloat(rj[lc0])||0));
+      // 상세 Loss: PM조정 컬럼부터 동적 컬럼 수만큼
+      var larr2=[];for(var lc0=_lossStart;lc0<_lossStart+_lossColCount;lc0++)larr2.push(typeof rj[lc0]==='number'?rj[lc0]:(parseFloat(rj[lc0])||0));
       if(!lossDetailByDateEq[ds2])lossDetailByDateEq[ds2]={};
-      if(!lossDetailByDateEq[ds2][eq2])lossDetailByDateEq[ds2][eq2]={prod:0,st:0,larr:new Array(13).fill(0)};
+      if(!lossDetailByDateEq[ds2][eq2])lossDetailByDateEq[ds2][eq2]={prod:0,st:0,larr:new Array(_lossColCount).fill(0)};
       lossDetailByDateEq[ds2][eq2].prod+=prod2;
       if(st2>0)lossDetailByDateEq[ds2][eq2].st=st2;
-      for(var lc1=0;lc1<13;lc1++)lossDetailByDateEq[ds2][eq2].larr[lc1]+=larr2[lc1];
+      for(var lc1=0;lc1<_lossColCount;lc1++)lossDetailByDateEq[ds2][eq2].larr[lc1]+=larr2[lc1];
       _dbgRows++;
     }
   }
@@ -696,7 +706,7 @@ function processWorkbook(wb){
     prodByWeekEq:prodByWeekEq,stopByWeekEq:stopByWeekEq,weekList:weekList,
     prodTotalEq:prodTotalEq,stopTotalEq:stopTotalEq,eqDates:eqDates,eqWeekDates:eqWeekDates,
     lossByLineDate:lossByLineDate,lossAccumByLine:lossAccumByLine,lossDates:lossDates,
-    lossDetailByDateEq:lossDetailByDateEq,
+    lossDetailByDateEq:lossDetailByDateEq,lossDetailHeaders:_lossDetailHeaders,lossColCount:_lossColCount||13,
     dataVersion:DATA_VERSION,_lossDbg:_lossDbg,
     _dbg:{sheets:_dbgAllSheets,matchedSheets:_dbgSheets,rows:_dbgRows,dates:Object.keys(prodByDateEq).length,weeks:weekList.length,eqs:Object.keys(prodTotalEq).filter(function(e){return(prodTotalEq[e]||0)>0})}
   };
@@ -1296,11 +1306,13 @@ function buildLossDetail(){
   h+='<table style="border-collapse:collapse;min-width:max-content"><thead><tr>';
   h+='<th style="'+thS+';'+stkL+'background:#1e3a5f;min-width:56px">'+t('equip')+'</th>';
   h+='<th style="'+thS+'">'+t('plan')+'</th><th style="'+thS+'">'+t('prod')+'</th><th style="'+thS+'">'+t('utilRate')+'</th><th style="'+thS+'">'+t('lossRate')+'</th>';
-  t('lossDetailHdr').forEach(function(c){h+='<th style="'+thS+'">'+c+'</th>';});
+  var _dynHdr=(D.lossDetailHeaders&&D.lossDetailHeaders.length>0)?D.lossDetailHeaders:t('lossDetailHdr');
+  var _nCols=D.lossColCount||_dynHdr.length||13;
+  _dynHdr.forEach(function(c){h+='<th style="'+thS+'">'+c+'</th>';});
   h+='</tr></thead><tbody>';
-  var totProd=0,totCapa=0,totLarr=new Array(13).fill(0);
+  var totProd=0,totCapa=0,totLarr=new Array(_nCols).fill(0);
   // 컬럼별 max값 계산 (세로 색조용)
-  var colMaxLoss=0,colMaxArr=new Array(13).fill(0);
+  var colMaxLoss=0,colMaxArr=new Array(_nCols).fill(0);
   eqList.forEach(function(eq){
     var d=dateData[eq],prod=d.prod||0;
     var stA=getSTActual(eq)||(d.st>0?d.st:0);
