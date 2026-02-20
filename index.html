@@ -190,7 +190,7 @@ function processWorkbook(wb){
     if(typeof v==='string'){var m=v.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);if(m)return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0')}
     return'';
   }
-  var prodByDateEq={}, eqStRaw={};
+  var prodByDateEq={}, eqStRaw={}, dateToWeek={}, eqDates={}, eqWeekDates={};
   for(var ni=0;ni<wb.SheetNames.length;ni++){
     var nsn=wb.SheetNames[ni];
     if(nsn.indexOf('日报')===-1)continue;
@@ -201,9 +201,13 @@ function processWorkbook(wb){
       var eq2=(rj[4]||'').toString().trim().toUpperCase(); if(!eq2)continue;
       var prod2=typeof rj[11]==='number'?rj[11]:(parseFloat(rj[11])||0);
       var st2=typeof rj[12]==='number'?rj[12]:(parseFloat(rj[12])||0);
+      var wk2=(rj[2]||'').toString().trim();
       if(!prodByDateEq[ds2])prodByDateEq[ds2]={};
       prodByDateEq[ds2][eq2]=(prodByDateEq[ds2][eq2]||0)+prod2;
       if(st2>0){if(!eqStRaw[eq2])eqStRaw[eq2]={s:0,n:0};eqStRaw[eq2].s+=st2;eqStRaw[eq2].n++}
+      if(wk2&&!dateToWeek[ds2])dateToWeek[ds2]=wk2;
+      if(!eqDates[eq2])eqDates[eq2]={};eqDates[eq2][ds2]=1;
+      if(wk2){if(!eqWeekDates[wk2])eqWeekDates[wk2]={};if(!eqWeekDates[wk2][eq2])eqWeekDates[wk2][eq2]={};eqWeekDates[wk2][eq2][ds2]=1;}
     }
   }
   var stopByDateEq={};
@@ -224,6 +228,25 @@ function processWorkbook(wb){
   var avgEqST={};
   Object.keys(eqStRaw).forEach(function(eq){if(eqStRaw[eq].n>0)avgEqST[eq]=eqStRaw[eq].s/eqStRaw[eq].n});
   var stDates=Object.keys(prodByDateEq).sort();
+  // 주차별 집계
+  var prodByWeekEq={},stopByWeekEq={},prodTotalEq={},stopTotalEq={};
+  Object.keys(prodByDateEq).forEach(function(dt){
+    var wk=dateToWeek[dt];
+    Object.keys(prodByDateEq[dt]).forEach(function(eq){
+      var v=prodByDateEq[dt][eq];
+      if(wk){if(!prodByWeekEq[wk])prodByWeekEq[wk]={};prodByWeekEq[wk][eq]=(prodByWeekEq[wk][eq]||0)+v;}
+      prodTotalEq[eq]=(prodTotalEq[eq]||0)+v;
+    });
+  });
+  Object.keys(stopByDateEq).forEach(function(dt){
+    var wk=dateToWeek[dt];
+    Object.keys(stopByDateEq[dt]).forEach(function(eq){
+      var v=stopByDateEq[dt][eq];
+      if(wk){if(!stopByWeekEq[wk])stopByWeekEq[wk]={};stopByWeekEq[wk][eq]=(stopByWeekEq[wk][eq]||0)+v;}
+      stopTotalEq[eq]=(stopTotalEq[eq]||0)+v;
+    });
+  });
+  var weekList=Object.keys(prodByWeekEq).sort(function(a,b){return+a-+b});
 
   var all_dates=[]; var dateSet={};
   for(var ai=0;ai<allRows.length;ai++){if(!dateSet[allRows[ai].ds]){dateSet[allRows[ai].ds]=1;all_dates.push(allRows[ai].ds)}}
@@ -268,7 +291,9 @@ function processWorkbook(wb){
     eqCnt:eq_order.length,
     dateRange:all_dates[0]+' ~ '+all_dates[all_dates.length-1],
     lineSummary:lineSummary,
-    prodByDateEq:prodByDateEq,stopByDateEq:stopByDateEq,avgEqST:avgEqST,stDates:stDates
+    prodByDateEq:prodByDateEq,stopByDateEq:stopByDateEq,avgEqST:avgEqST,stDates:stDates,
+    prodByWeekEq:prodByWeekEq,stopByWeekEq:stopByWeekEq,weekList:weekList,
+    prodTotalEq:prodTotalEq,stopTotalEq:stopTotalEq,eqDates:eqDates,eqWeekDates:eqWeekDates
   };
 }
 
@@ -763,7 +788,7 @@ function renderAll(){
   '</div>'+
   '<div class="pn"><div class="bx"><h3>🔥 설비 일자별 불량수량</h3>'+legend+'<div class="hc" id="hm_def"></div></div></div>'+
   '<div class="pn"><div class="bx"><h3>🔥 설비 일자별 조정시간(분)</h3>'+legend+'<div class="hc" id="hm_time"></div></div></div>'+
-  '<div class="pn" id="stAnalysisPanel">'+(D.stDates&&D.stDates.length?buildSTAnalysisPage(D.stDates[D.stDates.length-1]):'<div style="padding:40px;text-align:center;color:#94a3b8"><p style="font-size:15px;color:#60a5fa;margin-bottom:12px">⚠ 생산 데이터 없음</p><p>이 탭은 <strong style="color:#e2e8f0">시간대비차이.xlsx</strong> 파일을 업로드해야 동작합니다<br><br>해당 파일에는 <code style="color:#93c5fd">N1 日报</code>, <code style="color:#93c5fd">N2 日报</code> 시트가 필요합니다</p></div>')+'</div>';
+  '<div class="pn" id="stAnalysisPanel">'+buildSTAnalysisPage(D.stDates&&D.stDates.length?D.stDates[D.stDates.length-1]:'','daily')+'</div>';
 
   // Render summary chart
   renderWorstWeekChart();
@@ -795,88 +820,113 @@ function getSTActual(eq){
   return avgST/2;
 }
 
-function buildSTAnalysisPage(dateStr){
-  if(!D||!D.stDates||!D.stDates.length)return'<div style="padding:20px;color:#94a3b8">생산 데이터가 없습니다</div>';
-  var prod=(D.prodByDateEq||{})[dateStr]||{};
-  var stop=(D.stopByDateEq||{})[dateStr]||{};
-  var sumCapa=0,sumProd=0,sumStop=0,sumStopQty=0;
-  var rows=[];
+function buildSTTable(prod,stop,getCapaFn){
+  function concluCell(v){if(!v)return'<td></td>';if(v==='정상')return'<td class="good">정상</td>';return'<td class="bad">'+v+'</td>'}
+  function diffCell(v){if(v===null||v===undefined)return'<td></td>';var s=(v>=0?'+':'')+Math.round(v).toLocaleString();return'<td style="color:'+(v>=0?'#22c55e':'#ef4444')+';font-weight:700">'+s+'</td>'}
+  var sumCapa=0,sumProd=0,sumStop=0,sumStopQty=0,rows=[];
   ST_EQ_LIST.forEach(function(eq){
     var stA=getSTActual(eq); if(!stA)return;
-    var capa=86400/stA;
-    var production=prod[eq]||0;
-    var stopTime=stop[eq]||0;
+    var capa=getCapaFn(eq,stA);
+    var production=prod[eq]||0,stopTime=stop[eq]||0;
     var stopQty=stopTime>0?(stopTime*60/stA):0;
     var rate=production>0?production/capa:0;
     var diff=production>0?production-capa:null;
     var cvDiff=diff!==null?(diff>0?diff-stopQty:diff+stopQty):null;
     var conclu=cvDiff===null?'':(Math.abs(cvDiff)>500?(diff>0?'S/T 이상':'기록이상'):'정상');
-    sumCapa+=capa; sumProd+=production; sumStop+=stopTime; sumStopQty+=stopQty;
+    sumCapa+=capa;sumProd+=production;sumStop+=stopTime;sumStopQty+=stopQty;
     rows.push({eq:eq,stA:stA,capa:capa,prod:production,rate:rate,diff:diff,stopTime:stopTime,stopQty:stopQty,cvDiff:cvDiff,conclu:conclu});
   });
   var sumDiff=sumProd>0?sumProd-sumCapa:null;
   var sumCvDiff=sumDiff!==null?(sumDiff>0?sumDiff-sumStopQty:sumDiff+sumStopQty):null;
   var sumConclu=sumCvDiff===null?'':(Math.abs(sumCvDiff)>500?(sumDiff>0?'S/T 이상':'기록이상'):'정상');
-
-  function concluCell(v){if(!v)return'<td></td>';if(v==='정상')return'<td class="good">정상</td>';return'<td class="bad">'+v+'</td>'}
-  function diffCell(v,colored){if(v===null||v===undefined)return'<td></td>';var s=(v>=0?'+':'')+Math.round(v).toLocaleString();return'<td style="color:'+(v>=0?'#22c55e':'#ef4444')+';font-weight:700">'+s+'</td>'}
-
-  var h='<div class="bx"><h3>⏱ 시간대비분析 <em>일자: '+dateStr+'</em></h3>';
-  h+='<div style="margin-bottom:10px">';
-  h+='<label style="color:#94a3b8;font-size:13px">일자 선택: </label>';
-  h+='<select onchange="renderSTAnalysis(this.value)" style="background:#1a1a1a;color:#e2e8f0;border:1px solid #3b82f6;border-radius:6px;padding:5px 10px;font-size:13px">';
-  (D.stDates||[]).slice().reverse().forEach(function(d){h+='<option value="'+d+'"'+(d===dateStr?' selected':'')+'>'+d+'</option>'});
-  h+='</select></div>';
-  h+='<div class="hc"><table class="ht"><thead><tr>';
+  var h='<div class="hc"><table class="ht"><thead><tr>';
   h+='<th>설비</th><th>S/T실제(초)</th><th>Capa</th><th>생산량</th><th>가동율</th><th>차이</th><th>정지시간(분)</th><th>수량환산</th><th>환산차이</th><th>결론</th>';
   h+='</tr></thead><tbody>';
-  // 요약행
   var sSt=sumProd>0?(sumProd/sumCapa*100).toFixed(1)+'%':'';
   h+='<tr style="background:#1e3a5f;font-weight:700">';
   h+='<th style="color:#fcd34d;background:#1e3a5f">요약</th><td style="background:#1e3a5f"></td>';
   h+='<td style="color:#60a5fa">'+Math.round(sumCapa).toLocaleString()+'</td>';
   h+='<td style="color:#60a5fa">'+Math.round(sumProd).toLocaleString()+'</td>';
   h+='<td style="color:#60a5fa">'+sSt+'</td>';
-  h+=diffCell(sumDiff,true);
+  h+=diffCell(sumDiff);
   h+='<td>'+Math.round(sumStop).toLocaleString()+'</td>';
   h+='<td>'+Math.round(sumStopQty).toLocaleString()+'</td>';
-  h+=diffCell(sumCvDiff,true);
-  h+=concluCell(sumConclu);
-  h+='</tr>';
-  // 라인 구분 헤더 변수
+  h+=diffCell(sumCvDiff);h+=concluCell(sumConclu);h+='</tr>';
   var lastLine='';
   rows.forEach(function(r){
     var curLine=r.eq[0];
     if(curLine!==lastLine){
-      var lineColors={K:'#f59e0b',H:'#22c55e',G:'#06b6d4'};
-      h+='<tr><th colspan="10" style="background:'+lineColors[curLine]+'22;color:'+lineColors[curLine]+';text-align:left;padding:4px 8px;font-size:11px">'+curLine+' Line</th></tr>';
+      var lc={K:'#f59e0b',H:'#22c55e',G:'#06b6d4'};
+      h+='<tr><th colspan="10" style="background:'+lc[curLine]+'22;color:'+lc[curLine]+';text-align:left;padding:4px 8px;font-size:11px">'+curLine+' Line</th></tr>';
       lastLine=curLine;
     }
-    h+='<tr>';
-    h+='<th style="color:#93c5fd">'+r.eq+'</th>';
-    h+='<td>'+r.stA.toFixed(3)+'</td>';
-    h+='<td>'+Math.round(r.capa).toLocaleString()+'</td>';
+    h+='<tr><th style="color:#93c5fd">'+r.eq+'</th>';
+    h+='<td>'+r.stA.toFixed(3)+'</td><td>'+Math.round(r.capa).toLocaleString()+'</td>';
     h+='<td>'+(r.prod>0?Math.round(r.prod).toLocaleString():'<span style="color:#4b5563">0</span>')+'</td>';
     h+='<td>'+(r.rate>0?(r.rate*100).toFixed(1)+'%':'')+'</td>';
-    h+=diffCell(r.diff,true);
+    h+=diffCell(r.diff);
     h+='<td>'+(r.stopTime>0?Math.round(r.stopTime).toLocaleString():'')+'</td>';
     h+='<td>'+(r.stopQty>0?Math.round(r.stopQty).toLocaleString():'')+'</td>';
-    h+=diffCell(r.cvDiff,true);
-    h+=concluCell(r.conclu);
-    h+='</tr>';
+    h+=diffCell(r.cvDiff);h+=concluCell(r.conclu);h+='</tr>';
   });
   h+='</tbody></table></div>';
-  h+='<div style="margin-top:8px;font-size:11px;color:#94a3b8">';
-  h+='S/T실제: K07/K08/G라인=ST÷2, K09~K12=ST÷4, K13/K14=1.85초, H라인=3.75초 고정 | ';
-  h+='환산차이: 차이>0이면 차이-수량환산, 차이&lt;0이면 차이+수량환산 | ';
-  h+='결론: |환산차이|>500 → S/T이상/기록이상</div>';
+  return h;
+}
+
+function buildSTAnalysisPage(key,viewType){
+  viewType=viewType||'daily';
+  if(!D||!D.stDates)return'<div style="padding:20px;color:#94a3b8">데이터 없음</div>';
+  var btnStyle='padding:7px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid #2a2a2a;touch-action:manipulation';
+  var onStyle=';background:#3b82f6;color:#fff;border-color:#3b82f6';
+  var offStyle=';background:#1a1a1a;color:#94a3b8';
+  var h='<div class="bx"><h3>⏱ 시간대비분析</h3>';
+  // 뷰 선택 버튼
+  h+='<div style="display:flex;gap:6px;margin-bottom:12px">';
+  h+='<button style="'+btnStyle+(viewType==='daily'?onStyle:offStyle)+'" onclick="renderSTAnalysis(\''+(D.stDates.length?D.stDates[D.stDates.length-1]:'')+'\',\'daily\')">일자별</button>';
+  h+='<button style="'+btnStyle+(viewType==='weekly'?onStyle:offStyle)+'" onclick="renderSTAnalysis(\''+(D.weekList&&D.weekList.length?D.weekList[D.weekList.length-1]:'')+'\',\'weekly\')">주차별</button>';
+  h+='<button style="'+btnStyle+(viewType==='cumul'?onStyle:offStyle)+'" onclick="renderSTAnalysis(\'\',\'cumul\')">누적</button>';
+  h+='</div>';
+  var prod,stop,getCapaFn,subtitle='';
+  if(viewType==='daily'){
+    var selDate=key||(D.stDates.length?D.stDates[D.stDates.length-1]:'');
+    h+='<div style="margin-bottom:10px"><label style="color:#94a3b8;font-size:13px">일자 선택: </label>';
+    h+='<select onchange="renderSTAnalysis(this.value,\'daily\')" style="background:#1a1a1a;color:#e2e8f0;border:1px solid #3b82f6;border-radius:6px;padding:5px 10px;font-size:13px">';
+    (D.stDates||[]).slice().reverse().forEach(function(d){h+='<option value="'+d+'"'+(d===selDate?' selected':'')+'>'+d+'</option>'});
+    h+='</select></div>';
+    prod=(D.prodByDateEq||{})[selDate]||{};
+    stop=(D.stopByDateEq||{})[selDate]||{};
+    getCapaFn=function(eq,stA){return 86400/stA};
+    subtitle=selDate;
+  } else if(viewType==='weekly'){
+    var selWeek=key||(D.weekList&&D.weekList.length?D.weekList[D.weekList.length-1]:'');
+    h+='<div style="margin-bottom:10px"><label style="color:#94a3b8;font-size:13px">주차 선택: </label>';
+    h+='<select onchange="renderSTAnalysis(this.value,\'weekly\')" style="background:#1a1a1a;color:#e2e8f0;border:1px solid #3b82f6;border-radius:6px;padding:5px 10px;font-size:13px">';
+    (D.weekList||[]).slice().reverse().forEach(function(w){h+='<option value="'+w+'"'+(w===selWeek?' selected':'')+'>'+w+'주차</option>'});
+    h+='</select></div>';
+    prod=(D.prodByWeekEq||{})[selWeek]||{};
+    stop=(D.stopByWeekEq||{})[selWeek]||{};
+    getCapaFn=function(eq,stA){var wd=D.eqWeekDates&&D.eqWeekDates[selWeek]&&D.eqWeekDates[selWeek][eq]?Object.keys(D.eqWeekDates[selWeek][eq]).length:0;return wd*86400/stA};
+    subtitle=selWeek+'주차';
+  } else {
+    prod=D.prodTotalEq||{};
+    stop=D.stopTotalEq||{};
+    getCapaFn=function(eq,stA){var n=D.eqDates&&D.eqDates[eq]?Object.keys(D.eqDates[eq]).length:0;return n*86400/stA};
+    subtitle='전체 누적';
+  }
+  if(!D.stDates.length){
+    h+='<div style="padding:30px;text-align:center;color:#94a3b8">⚠ 생산 데이터 없음 — 日报 시트가 있는 파일을 업로드하세요</div></div>';
+    return h;
+  }
+  h+='<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">기준: <strong style="color:#e2e8f0">'+subtitle+'</strong></div>';
+  h+=buildSTTable(prod,stop,getCapaFn);
+  h+='<div style="margin-top:8px;font-size:11px;color:#94a3b8">S/T실제: K07/K08/G=ST÷2, K09~K12=ST÷4, K13/K14=1.85초, H=3.75초 | 환산차이: 차이±수량환산 | 결론: |환산차이|>500 → 이상</div>';
   h+='</div>';
   return h;
 }
 
-function renderSTAnalysis(dateStr){
+function renderSTAnalysis(key,viewType){
   var panel=document.getElementById('stAnalysisPanel');
-  if(panel)panel.innerHTML=buildSTAnalysisPage(dateStr);
+  if(panel)panel.innerHTML=buildSTAnalysisPage(key,viewType||'daily');
 }
 
 function clearData(){
