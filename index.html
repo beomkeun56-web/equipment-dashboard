@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v6.5</title>
+<title>Production Performance v6.6</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v6.5</h1>
+<h1>📊 Production Performance v6.6</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -230,7 +230,7 @@ stActual:'S/T실제: ',
 stConvDiff:'환산차이: ',
 stConclusion:'결론: ',
 stOver:'이상',
-lossDetailHdr:['PM조정','완전불량','공정불량','치수불량','Lead교체','Film교체','정지','원자재불량','품질샘플','2차불량','기록차이','M차이','기술조정'],
+lossDetailHdr:['PM조정','완전불량','공정불량','치수불량','Lead교체','Film교체','정지','원자재불량','품질샘플','기술조정'],
 lossNoData:'LOSS 데이터 없음',
 selDateLine:'선택 날짜/라인 데이터 없음',
 min:'분',
@@ -362,7 +362,7 @@ stActual:'S/T实际: ',
 stConvDiff:'换算差异: ',
 stConclusion:'结论: ',
 stOver:'异常',
-lossDetailHdr:['PM调整','完全不良','工程不良','尺寸不良','Lead更换','Film更换','停机','原资材不良','品质样品','二次不良','记录差异','M差异','技术调整'],
+lossDetailHdr:['PM调整','完全不良','工程不良','尺寸不良','Lead更换','Film更换','停机','原资材不良','品质样品','技术调整'],
 lossNoData:'LOSS 无数据',
 selDateLine:'无所选日期/产线数据',
 min:'分',
@@ -396,7 +396,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='6.5'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='6.6'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 function handleFile(input){
   var file=input.files[0]; if(!file)return;
@@ -532,7 +532,7 @@ function processWorkbook(wb){
       prodByWeekEq:{},stopByWeekEq:{},weekList:[],
       prodTotalEq:{},stopTotalEq:{},eqDates:{},eqWeekDates:{},
       lossByLineDate:lossByLineDate,lossAccumByLine:lossAccumByLine,lossDates:lossDates,
-      lossDetailByDateEq:{},lossDetailHeaders:_lossDetailHeaders,lossColCount:_lossColCount||13,dataVersion:DATA_VERSION,_lossDbg:_lossDbg,
+      lossDetailByDateEq:{},dataVersion:DATA_VERSION,_lossDbg:_lossDbg,
       _dbg:{sheets:_dbgAllSheets,matchedSheets:[],rows:0,dates:0,weeks:0,eqs:[]}
     };
   }
@@ -559,38 +559,45 @@ function processWorkbook(wb){
     return'';
   }
   var prodByDateEq={}, eqStRaw={}, dateToWeek={}, eqDates={}, eqWeekDates={};
-  var lossDetailByDateEq={}; // 상세 Loss용 설비별 데이터
-  var _lossDetailHeaders=[]; // 日报에서 동적으로 읽은 실제 헤더
-  var _lossColCount=0; // 실제 Loss 상세 컬럼 수
+  var lossDetailByDateEq={}; // 상세 Loss용 설비별 데이터 (10개 항목: PM조정~품질샘플 + 기술조정)
+  var LOSS_COL_COUNT=10; // 고정 10개 항목
+  // 日报 헤더→인덱스 매핑 (9개 항목, 이름 기반)
+  var _lossColMap=[
+    {names:['PM调整','PM조정','PM調整'],idx:0},
+    {names:['完全不良','완전불량'],idx:1},
+    {names:['工程不良','공정불량'],idx:2},
+    {names:['尺寸不良','치수불량'],idx:3},
+    {names:['Lead更换','Lead교체','LEAD更换'],idx:4},
+    {names:['Film更换','Film교체','FILM更换'],idx:5},
+    {names:['停机','정지','停機'],idx:6},
+    {names:['原资材','원자재','原資材','原资材不良','원자재불량'],idx:7},
+    {names:['品质样品','품질샘플','品質樣品'],idx:8}
+  ];
   var _dbgSheets=[],_dbgRows=0; // 디버그용
   for(var ni=0;ni<_niboSheets.length;ni++){
     var nsn=_niboSheets[ni];
     _dbgSheets.push(nsn);
     var raw2=XLSX.utils.sheet_to_json(wb.Sheets[nsn],{header:1,defval:null,raw:true});
-    // PM调整 시작 컬럼 동적 감지 + 헤더 읽기
-    var _lossStart=-1,_lossHdrRow=-1;
-    var _lossKeys=['PM调整','PM조정','PM調整'];
+    // 전체 헤더 행에서 9개 항목의 컬럼 위치를 이름으로 찾기
+    var _colIdx={}; // {실제컬럼번호: larr인덱스}
+    var _foundCount=0;
     for(var hr=0;hr<Math.min(raw2.length,5);hr++){
       var hrow=raw2[hr];if(!hrow)continue;
       for(var hc=0;hc<hrow.length;hc++){
-        var hv=(hrow[hc]||'').toString().trim();
-        if(_lossStart<0&&hv){for(var lk=0;lk<_lossKeys.length;lk++){if(hv.indexOf(_lossKeys[lk])>=0){_lossStart=hc;_lossHdrRow=hr;break;}}}
+        var hv=(hrow[hc]!=null)?String(hrow[hc]).trim():'';
+        if(!hv)continue;
+        for(var mi=0;mi<_lossColMap.length;mi++){
+          if(_colIdx[hc]!==undefined)continue; // 이미 매핑됨
+          var alreadyMapped=false;for(var ck in _colIdx){if(_colIdx[ck]===_lossColMap[mi].idx){alreadyMapped=true;break;}}
+          if(alreadyMapped)continue;
+          for(var mn=0;mn<_lossColMap[mi].names.length;mn++){
+            if(hv.indexOf(_lossColMap[mi].names[mn])>=0){_colIdx[hc]=_lossColMap[mi].idx;_foundCount++;break;}
+          }
+        }
       }
-      if(_lossStart>=0)break;
+      if(_foundCount>=5)break; // 충분히 찾으면 중단
     }
-    if(_lossStart<0)_lossStart=24;
-    // 헤더 행에서 PM调整부터 연속된 텍스트 헤더를 읽어 실제 컬럼명 결정
-    if(_lossHdrRow>=0&&_lossDetailHeaders.length===0){
-      var _hdr=raw2[_lossHdrRow];
-      for(var _hi=_lossStart;_hi<_hdr.length;_hi++){
-        var _hv=(_hdr[_hi]!=null)?String(_hdr[_hi]).trim():'';
-        if(!_hv)break; // 빈 셀이 나오면 끝
-        _lossDetailHeaders.push(_hv);
-      }
-      _lossColCount=_lossDetailHeaders.length;
-      console.log('[日报 '+nsn+'] PM调整 컬럼='+_lossStart+', 동적헤더('+_lossColCount+'개)='+_lossDetailHeaders.join(','));
-    }
-    if(_lossColCount===0)_lossColCount=13;
+    console.log('[日报 '+nsn+'] 컬럼매핑('+_foundCount+'개): '+Object.keys(_colIdx).map(function(c){return 'c'+c+'→idx'+_colIdx[c];}).join(', '));
     var lastDate2=null,lastWeek2=null;
     for(var j=2;j<raw2.length;j++){
       var rj=raw2[j]; if(!rj)continue;
@@ -608,16 +615,52 @@ function processWorkbook(wb){
       if(wk2&&!dateToWeek[ds2])dateToWeek[ds2]=wk2;
       if(!eqDates[eq2])eqDates[eq2]={};eqDates[eq2][ds2]=1;
       if(wk2){if(!eqWeekDates[wk2])eqWeekDates[wk2]={};if(!eqWeekDates[wk2][eq2])eqWeekDates[wk2][eq2]={};eqWeekDates[wk2][eq2][ds2]=1;}
-      // 상세 Loss: PM조정 컬럼부터 동적 컬럼 수만큼
-      var larr2=[];for(var lc0=_lossStart;lc0<_lossStart+_lossColCount;lc0++)larr2.push(typeof rj[lc0]==='number'?rj[lc0]:(parseFloat(rj[lc0])||0));
+      // 상세 Loss: 이름 기반 매핑으로 9개 항목 채우기
       if(!lossDetailByDateEq[ds2])lossDetailByDateEq[ds2]={};
-      if(!lossDetailByDateEq[ds2][eq2])lossDetailByDateEq[ds2][eq2]={prod:0,st:0,larr:new Array(_lossColCount).fill(0)};
+      if(!lossDetailByDateEq[ds2][eq2])lossDetailByDateEq[ds2][eq2]={prod:0,st:0,larr:new Array(LOSS_COL_COUNT).fill(0)};
       lossDetailByDateEq[ds2][eq2].prod+=prod2;
       if(st2>0)lossDetailByDateEq[ds2][eq2].st=st2;
-      for(var lc1=0;lc1<_lossColCount;lc1++)lossDetailByDateEq[ds2][eq2].larr[lc1]+=larr2[lc1];
+      for(var ck2 in _colIdx){
+        var ci2=parseInt(ck2),li2=_colIdx[ck2];
+        var cv2=typeof rj[ci2]==='number'?rj[ci2]:(parseFloat(rj[ci2])||0);
+        lossDetailByDateEq[ds2][eq2].larr[li2]+=cv2;
+      }
       _dbgRows++;
     }
   }
+  // === 기술조정: LG设备调试(G,K) + Local设备调试(H,E) 시트 파싱 ===
+  var _techSheets=[];
+  for(var tsi=0;tsi<wb.SheetNames.length;tsi++){
+    var tsn=wb.SheetNames[tsi];
+    if(tsn.indexOf('LG设备调试')>=0||tsn.indexOf('LG設備調試')>=0){_techSheets.push({name:tsn,lines:['G','K']});}
+    else if(tsn.indexOf('Local设备调试')>=0||tsn.indexOf('LOCAL设备调试')>=0||tsn.indexOf('Local設備調試')>=0){_techSheets.push({name:tsn,lines:['H','E']});}
+  }
+  var _techCnt=0;
+  for(var ti=0;ti<_techSheets.length;ti++){
+    var tSheet=_techSheets[ti];
+    var rawT=XLSX.utils.sheet_to_json(wb.Sheets[tSheet.name],{header:1,defval:null,raw:true});
+    if(!rawT||rawT.length<2)continue;
+    for(var tr=1;tr<rawT.length;tr++){
+      var trow=rawT[tr];if(!trow)continue;
+      var tDate=parseStDate(trow[1]); // B열=날짜
+      if(!tDate)continue;
+      var tEqRaw=(trow[2]||'').toString().trim().toUpperCase(); // C열=설비명칭
+      if(!tEqRaw)continue;
+      // 설비명 정규화: K14-1 → K14, G13-2 → G13
+      var tEq=tEqRaw.replace(/-\d+$/,'');
+      // 라인 체크: 설비 첫글자가 해당 시트의 라인에 포함되는지
+      var tLine=tEq[0];
+      if(tSheet.lines.indexOf(tLine)<0)continue;
+      var tQty=typeof trow[8]==='number'?trow[8]:(parseFloat(trow[8])||0); // I열=불량수량
+      if(tQty===0)continue;
+      if(!lossDetailByDateEq[tDate])lossDetailByDateEq[tDate]={};
+      if(!lossDetailByDateEq[tDate][tEq])lossDetailByDateEq[tDate][tEq]={prod:0,st:0,larr:new Array(LOSS_COL_COUNT).fill(0)};
+      lossDetailByDateEq[tDate][tEq].larr[9]+=tQty; // idx 9 = 기술조정
+      _techCnt++;
+    }
+    console.log('[기술조정 '+tSheet.name+'] 라인='+tSheet.lines.join(',')+', 행수='+rawT.length);
+  }
+  console.log('[기술조정] 총 '+_techCnt+'건 매핑완료, 시트수='+_techSheets.length);
   var avgEqST={};
   Object.keys(eqStRaw).forEach(function(eq){if(eqStRaw[eq].n>0)avgEqST[eq]=eqStRaw[eq].s/eqStRaw[eq].n});
   var stDates=Object.keys(prodByDateEq).sort();
@@ -712,7 +755,7 @@ function processWorkbook(wb){
     prodByWeekEq:prodByWeekEq,stopByWeekEq:stopByWeekEq,weekList:weekList,
     prodTotalEq:prodTotalEq,stopTotalEq:stopTotalEq,eqDates:eqDates,eqWeekDates:eqWeekDates,
     lossByLineDate:lossByLineDate,lossAccumByLine:lossAccumByLine,lossDates:lossDates,
-    lossDetailByDateEq:lossDetailByDateEq,lossDetailHeaders:_lossDetailHeaders,lossColCount:_lossColCount||13,
+    lossDetailByDateEq:lossDetailByDateEq,
     dataVersion:DATA_VERSION,_lossDbg:_lossDbg,
     _dbg:{sheets:_dbgAllSheets,matchedSheets:_dbgSheets,rows:_dbgRows,dates:Object.keys(prodByDateEq).length,weeks:weekList.length,eqs:Object.keys(prodTotalEq).filter(function(e){return(prodTotalEq[e]||0)>0})}
   };
@@ -1303,7 +1346,7 @@ function buildLossDetail(){
   h+='</select></div>';
   h+='</div>';
   var dateData=D.lossDetailByDateEq[_lossDate]||{};
-  var eqList=Object.keys(dateData).filter(function(eq){return dateData[eq].prod>0;}).sort();
+  var eqList=Object.keys(dateData).filter(function(eq){var d=dateData[eq];return d.prod>0||d.larr.some(function(v){return v>0;});}).sort();
   if(!eqList.length)return h+'<div style="color:#94a3b8;padding:20px">'+t('selDateLine')+'</div>';
   var thS='background:#1e3a5f;color:#94a3b8;padding:5px 8px;font-size:11px;border:1px solid #2a2a2a;white-space:nowrap;text-align:center';
   var tdS='padding:4px 8px;font-size:11px;border:1px solid #2a2a2a;text-align:center;white-space:nowrap';
@@ -1312,9 +1355,9 @@ function buildLossDetail(){
   h+='<table style="border-collapse:collapse;min-width:max-content"><thead><tr>';
   h+='<th style="'+thS+';'+stkL+'background:#1e3a5f;min-width:56px">'+t('equip')+'</th>';
   h+='<th style="'+thS+'">'+t('plan')+'</th><th style="'+thS+'">'+t('prod')+'</th><th style="'+thS+'">'+t('utilRate')+'</th><th style="'+thS+'">'+t('lossRate')+'</th>';
-  var _dynHdr=(D.lossDetailHeaders&&D.lossDetailHeaders.length>0)?D.lossDetailHeaders:t('lossDetailHdr');
-  var _nCols=D.lossColCount||_dynHdr.length||13;
-  _dynHdr.forEach(function(c){h+='<th style="'+thS+'">'+c+'</th>';});
+  var _hdr=t('lossDetailHdr');
+  var _nCols=_hdr.length;
+  _hdr.forEach(function(c){h+='<th style="'+thS+'">'+c+'</th>';});
   h+='</tr></thead><tbody>';
   var totProd=0,totCapa=0,totLarr=new Array(_nCols).fill(0);
   // 컬럼별 max값 계산 (세로 색조용)
@@ -1344,7 +1387,16 @@ function buildLossDetail(){
     h+='<td style="'+tdS+';color:'+(util>=0.9?'#22c55e':util>=0.7?'#f59e0b':'#ef4444')+'">'+( util>0?(util*100).toFixed(1)+'%':'-')+'</td>';
     var lrRatio=colMaxLoss>0?lossR/colMaxLoss:0;
     h+='<td style="'+tdS+';background:'+detailClr(lrRatio)+';color:#fff">'+fmtLoss(lossR)+'</td>';
-    d.larr.forEach(function(v,i){totLarr[i]+=v;var pct=prod>0&&v>0?v/prod:0;var ratio=colMaxArr[i]>0?pct/colMaxArr[i]:0;h+='<td style="'+tdS+';background:'+detailClr(ratio)+';color:#fff">'+(pct>0?(pct*100).toFixed(2)+'%':'-')+'</td>';});
+    d.larr.forEach(function(v,i){
+      totLarr[i]+=v;
+      var pct=prod>0&&v>0?v/prod:0;
+      var ratio=colMaxArr[i]>0?pct/colMaxArr[i]:0;
+      // 기술조정(idx9): 생산수량 없으면 수량표시, 있으면 %표시
+      var cellTxt;
+      if(i===9&&v>0&&prod===0){cellTxt=Math.round(v).toLocaleString();}
+      else{cellTxt=pct>0?(pct*100).toFixed(2)+'%':'-';}
+      h+='<td style="'+tdS+';background:'+detailClr(ratio)+';color:#fff">'+cellTxt+'</td>';
+    });
     h+='</tr>';
   });
   // Total 행
@@ -1357,7 +1409,14 @@ function buildLossDetail(){
   h+='<td style="'+tdS+'">'+Math.round(totProd).toLocaleString()+'</td>';
   h+='<td style="'+tdS+';color:'+(totUtil>=0.9?'#22c55e':totUtil>=0.7?'#f59e0b':'#ef4444')+'">'+( totUtil>0?(totUtil*100).toFixed(1)+'%':'-')+'</td>';
   h+='<td style="'+tdS+';background:'+detailClr(colMaxLoss>0?totLoss/colMaxLoss:0)+';color:#fff">'+fmtLoss(totLoss)+'</td>';
-  totLarr.forEach(function(v,i){var pct=totProd>0&&v>0?v/totProd:0;var ratio=colMaxArr[i]>0?pct/colMaxArr[i]:0;h+='<td style="'+tdS+';background:'+detailClr(ratio)+';color:#fff">'+(pct>0?(pct*100).toFixed(2)+'%':'-')+'</td>';});
+  totLarr.forEach(function(v,i){
+    var pct=totProd>0&&v>0?v/totProd:0;
+    var ratio=colMaxArr[i]>0?pct/colMaxArr[i]:0;
+    var cellTxt;
+    if(i===9&&v>0&&totProd===0){cellTxt=Math.round(v).toLocaleString();}
+    else{cellTxt=pct>0?(pct*100).toFixed(2)+'%':'-';}
+    h+='<td style="'+tdS+';background:'+detailClr(ratio)+';color:#fff">'+cellTxt+'</td>';
+  });
   h+='</tr>';
   h+='</tbody></table></div>';
   return h;
