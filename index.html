@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v4.6</title>
+<title>Production Performance v4.7</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -84,7 +84,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd">
-<h1>📊 Production Performance v4.6</h1>
+<h1>📊 Production Performance v4.7</h1>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
 <div class="file-bar">
@@ -112,7 +112,7 @@ PM调整 데이터를 자동 분석합니다</p>
 
 <script>
 let D=null, charts=[];
-var DATA_VERSION='4.6'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='4.7'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 function handleFile(input){
   var file=input.files[0]; if(!file)return;
@@ -872,8 +872,12 @@ function fmtLoss(v){
   return(v*100).toFixed(2)+'%';
 }
 function lossClr(v){
-  if(!v||v===0)return'#64748b';
-  return v<=LOSS_TARGET?'#22c55e':'#ef4444';
+  // 값이 높을수록 진한 빨강 배경색 반환
+  if(!v||v===0)return'transparent';
+  if(v<=LOSS_TARGET)return'rgba(34,197,94,0.25)'; // 목표 이하=연한 초록
+  var t=Math.min((v-LOSS_TARGET)/(0.15-LOSS_TARGET),1); // 6~15% 범위에서 0→1
+  var r=Math.round(120+135*t), g=Math.round(30*(1-t)), b=Math.round(30*(1-t));
+  return'rgba('+r+','+g+','+b+','+(0.3+0.5*t)+')';
 }
 
 function buildLossPage(){
@@ -921,7 +925,7 @@ function buildLossDaily(){
       var a2=D.lossAccumByLine[ln]||{prod:0,loss:0};
       accum=a2.prod>0?a2.loss/a2.prod:0;
     }
-    h+='<td style="'+tdS+';'+stickyB+'background:'+(isT?'#1c2a3a':'#0a0a0a')+';color:'+lossClr(accum)+';font-weight:700;min-width:70px">'+fmtLoss(accum)+'</td>';
+    h+='<td style="'+tdS+';'+stickyB+'background:'+lossClr(accum)+';'+(isT?'':'')+'color:#fff;font-weight:700;min-width:70px">'+fmtLoss(accum)+'</td>';
     dates.forEach(function(dt){
       var v;
       if(isT){
@@ -930,7 +934,7 @@ function buildLossDaily(){
       } else {
         var dd2=D.lossByLineDate[dt]&&D.lossByLineDate[dt][ln];v=dd2?dd2.r:0;
       }
-      h+='<td style="'+tdS+';color:'+lossClr(v)+'">'+fmtLoss(v)+'</td>';
+      h+='<td style="'+tdS+';background:'+lossClr(v)+';color:#fff">'+fmtLoss(v)+'</td>';
     });
     h+='</tr>';
   });
@@ -938,8 +942,10 @@ function buildLossDaily(){
   h+='<tr><td style="'+tdS+';'+stickyA+'background:#0a0a0a;color:#f59e0b;font-weight:700;min-width:52px">목표</td>';
   h+='<td style="'+tdS+';'+stickyB+'background:#0a0a0a;color:#f59e0b;font-weight:700;min-width:70px">6.00%</td>';
   dates.forEach(function(){h+='<td style="'+tdS+';color:#f59e0b">6.00%</td>';});
-  h+='</tr></tbody></table></div>';
-  h+='<div style="margin-top:20px"><canvas id="lossChart"></canvas></div>';
+  h+='</tr></tbody></table>';
+  var chartW=Math.max(800,(dates.length+2)*70);
+  h+='<div style="margin-top:20px;min-width:'+chartW+'px"><canvas id="lossChart"></canvas></div>';
+  h+='</div>';
   return h;
 }
 
@@ -1021,7 +1027,7 @@ function initLossChart(){
   var ctx=canvas.getContext('2d');
   var ch=new Chart(ctx,{type:'line',
     data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),datasets:datasets},
-    options:{responsive:true,
+    options:{responsive:true,maintainAspectRatio:true,aspectRatio:3,
       plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}}}},
       scales:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'#1f2937'}},
         y:{ticks:{color:'#94a3b8',font:{size:10},callback:function(v){return v+'%'}},grid:{color:'#1f2937'},min:0,
