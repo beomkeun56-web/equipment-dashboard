@@ -398,7 +398,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='7.7'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='7.8'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -536,7 +536,7 @@ function processWorkbook(wb){
       var defect=parseFloat(r[18])||0;
       var line=eq[0];
       var detail=(r[15]||'').toString().trim();
-      allRows.push({ds:ds,eq:eq,sub:sub,detail:detail,defect:defect,time:time,stop:stopYN==='停',line:line,dateStr:dateStr});
+      allRows.push({ds:ds,eq:eq,sub:sub,detail:detail,defect:defect,time:time,stop:_stopYN==='停',line:line,dateStr:dateStr});
     }
   }
   // === 日别汇总: 이름매칭 → 바로 파싱 ===
