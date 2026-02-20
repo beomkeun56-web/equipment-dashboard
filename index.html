@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v4.1</title>
+<title>Production Performance v4.2</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -84,7 +84,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd">
-<h1>📊 Production Performance v4.1</h1>
+<h1>📊 Production Performance v4.2</h1>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
 <div class="file-bar">
@@ -112,7 +112,7 @@ PM调整 데이터를 자동 분석합니다</p>
 
 <script>
 let D=null, charts=[];
-var DATA_VERSION='4.1'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='4.2'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 function handleFile(input){
   var file=input.files[0]; if(!file)return;
@@ -189,7 +189,7 @@ function processWorkbook(wb){
     var xsn=wb.SheetNames[xi];
     var xsnHex=Array.from(xsn).map(function(c){return'U+'+c.charCodeAt(0).toString(16).toUpperCase()}).join(' ');
     console.log('[LOSS] 시트 체크:', xsn, xsnHex);
-    if(xsn.indexOf('日别汇总')===-1&&xsn.indexOf('日別汇总')===-1)continue;
+    if(xsn.indexOf('\u65E5\u522B\u6C47\u603B')===-1&&xsn.indexOf('\u65E5\u5225\u6C47\u603B')===-1&&xsn.indexOf('\u6C47\u603B')===-1)continue;
     console.log('[LOSS] 시트 매칭됨:', xsn);
     var rawX=XLSX.utils.sheet_to_json(wb.Sheets[xsn],{header:1,defval:null,raw:true});
     console.log('[LOSS] 총 행수:', rawX.length);
