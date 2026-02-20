@@ -183,42 +183,44 @@ function processWorkbook(wb){
   if(allRows.length===0){alert('PM调整 데이터가 없습니다.');return null}
 
   // === 시간대비분析 데이터 ===
+  function parseStDate(v){
+    if(!v)return'';
+    if(v instanceof Date){try{return v.toLocaleDateString('en-CA')}catch(e){return''}}
+    if(typeof v==='number'){var d=new Date(Math.round((v-25569)*86400)*1000);return d.toLocaleDateString('en-CA')}
+    if(typeof v==='string'){var m=v.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);if(m)return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0')}
+    return'';
+  }
   var prodByDateEq={}, eqStRaw={};
-  ['N1 日报','N2 日报'].forEach(function(sn){
-    if(wb.SheetNames.indexOf(sn)===-1)return;
-    var raw2=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:null,raw:false});
+  for(var ni=0;ni<wb.SheetNames.length;ni++){
+    var nsn=wb.SheetNames[ni];
+    if(nsn.indexOf('日报')===-1)continue;
+    var raw2=XLSX.utils.sheet_to_json(wb.Sheets[nsn],{header:1,defval:null,raw:true});
     for(var j=2;j<raw2.length;j++){
-      var rj=raw2[j]; if(!rj||!rj[3]||!rj[4])continue;
-      var dt2=rj[3],ds2='';
-      if(dt2 instanceof Date){try{ds2=new Date(dt2).toLocaleDateString('en-CA')}catch(e){continue}}
-      else if(typeof dt2==='string'){ds2=dt2.slice(0,10)}
-      else if(typeof dt2==='number'){var d3=new Date((dt2-25569)*86400000);ds2=d3.toISOString().slice(0,10)}
-      if(!ds2)continue;
+      var rj=raw2[j]; if(!rj||rj[3]==null||!rj[4])continue;
+      var ds2=parseStDate(rj[3]); if(!ds2)continue;
       var eq2=(rj[4]||'').toString().trim().toUpperCase(); if(!eq2)continue;
-      var prod2=parseFloat(rj[11])||0, st2=parseFloat(rj[12])||0;
+      var prod2=typeof rj[11]==='number'?rj[11]:(parseFloat(rj[11])||0);
+      var st2=typeof rj[12]==='number'?rj[12]:(parseFloat(rj[12])||0);
       if(!prodByDateEq[ds2])prodByDateEq[ds2]={};
       prodByDateEq[ds2][eq2]=(prodByDateEq[ds2][eq2]||0)+prod2;
       if(st2>0){if(!eqStRaw[eq2])eqStRaw[eq2]={s:0,n:0};eqStRaw[eq2].s+=st2;eqStRaw[eq2].n++}
     }
-  });
+  }
   var stopByDateEq={};
-  ['N1 调整履历','N2 调整履历'].forEach(function(sn){
-    if(wb.SheetNames.indexOf(sn)===-1)return;
-    var raw3=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:null,raw:false});
+  for(var ki=0;ki<wb.SheetNames.length;ki++){
+    var ksn=wb.SheetNames[ki];
+    if(ksn.indexOf('调整履历')===-1)continue;
+    var raw3=XLSX.utils.sheet_to_json(wb.Sheets[ksn],{header:1,defval:null,raw:true});
     for(var k=2;k<raw3.length;k++){
-      var rk=raw3[k]; if(!rk||!rk[3]||!rk[4])continue;
+      var rk=raw3[k]; if(!rk||rk[3]==null||!rk[4])continue;
       if((rk[19]||'').toString().trim()!=='停')continue;
-      var dt3=rk[3],ds3='';
-      if(dt3 instanceof Date){try{ds3=new Date(dt3).toLocaleDateString('en-CA')}catch(e){continue}}
-      else if(typeof dt3==='string'){ds3=dt3.slice(0,10)}
-      else if(typeof dt3==='number'){var d4=new Date((dt3-25569)*86400000);ds3=d4.toISOString().slice(0,10)}
-      if(!ds3)continue;
+      var ds3=parseStDate(rk[3]); if(!ds3)continue;
       var eq3=(rk[4]||'').toString().trim().toUpperCase(); if(!eq3)continue;
-      var sm=parseFloat(rk[20])||0;
+      var sm=typeof rk[20]==='number'?rk[20]:(parseFloat(rk[20])||0);
       if(!stopByDateEq[ds3])stopByDateEq[ds3]={};
       stopByDateEq[ds3][eq3]=(stopByDateEq[ds3][eq3]||0)+sm;
     }
-  });
+  }
   var avgEqST={};
   Object.keys(eqStRaw).forEach(function(eq){if(eqStRaw[eq].n>0)avgEqST[eq]=eqStRaw[eq].s/eqStRaw[eq].n});
   var stDates=Object.keys(prodByDateEq).sort();
