@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v7.1</title>
+<title>Production Performance v7.2</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v7.1</h1>
+<h1>📊 Production Performance v7.2</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -398,7 +398,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='7.1'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='7.2'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -887,7 +887,7 @@ function showEqHeatmap(eq){
   recentDates.forEach(function(d){
     var v=dayTime[d]||0;sumT+=v;
     var cls=hcl(v,mxT);
-    t+='<td class="'+cls+'" style="padding:6px 4px;border:1px solid #1a1a1a;text-align:center;font-size:11px;cursor:pointer" onclick="showDetail(\''+eq+'\',\''+d+'\',\'time\')">'+(v?Math.round(v).toLocaleString():'')+'</td>';
+    hm+='<td class="'+cls+'" style="padding:6px 4px;border:1px solid #1a1a1a;text-align:center;font-size:11px;cursor:pointer" onclick="showDetail(\''+eq+'\',\''+d+'\',\'time\')">'+(v?Math.round(v).toLocaleString():'')+'</td>';
   });
   hm+='<td style="background:#1e3a5f;font-weight:700;color:#60a5fa;padding:6px 4px;border:1px solid #1a1a1a;text-align:center">'+Math.round(sumT).toLocaleString()+'</td></tr>';
 
@@ -897,7 +897,7 @@ function showEqHeatmap(eq){
   recentDates.forEach(function(d){
     var v=dayDef[d]||0;sumD+=v;
     var cls=hcl(v,mxD);
-    t+='<td class="'+cls+'" style="padding:6px 4px;border:1px solid #1a1a1a;text-align:center;font-size:11px;cursor:pointer" onclick="showDetail(\''+eq+'\',\''+d+'\',\'defect\')">'+(v?Math.round(v).toLocaleString():'')+'</td>';
+    hm+='<td class="'+cls+'" style="padding:6px 4px;border:1px solid #1a1a1a;text-align:center;font-size:11px;cursor:pointer" onclick="showDetail(\''+eq+'\',\''+d+'\',\'defect\')">'+(v?Math.round(v).toLocaleString():'')+'</td>';
   });
   hm+='<td style="background:#1e3a5f;font-weight:700;color:#60a5fa;padding:6px 4px;border:1px solid #1a1a1a;text-align:center">'+Math.round(sumD).toLocaleString()+'</td></tr>';
 
