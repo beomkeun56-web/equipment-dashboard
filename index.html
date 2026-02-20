@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v5.1</title>
+<title>Production Performance v5.2</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v5.1</h1>
+<h1>📊 Production Performance v5.2</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -396,7 +396,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='5.1'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='5.2'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 function handleFile(input){
   var file=input.files[0]; if(!file)return;
@@ -433,15 +433,24 @@ function handleFile(input){
 }
 
 function processWorkbook(wb){
+  var _diag={sheets:wb.SheetNames.slice(),adj_sheet:'',adj_rows:0,adj_sample:[],adj_dates:[],adj_cats:[],loss_sheet:'',loss_rows:0,nibo_sheet:'',nibo_rows:0};
   var allRows=[];
   for(var si=0;si<wb.SheetNames.length;si++){
     var sn=wb.SheetNames[si];
     if(sn.indexOf('调整履历')===-1)continue;
+    _diag.adj_sheet=sn;
     var raw=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:null,raw:false});
     if(raw.length<3)continue;
+    _diag.adj_rows=raw.length;
+    // 처음 5행 샘플 수집
+    for(var di=2;di<Math.min(raw.length,7);di++){
+      var dr=raw[di];if(!dr)continue;
+      _diag.adj_sample.push({i:di,r3:String(dr[3]),r4:String(dr[4]),r13:String(dr[13]),r14:String(dr[14]),r19:String(dr[19]),type3:typeof dr[3]});
+    }
     for(var i=2;i<raw.length;i++){
       var r=raw[i]; if(!r||!r[3]||!r[4])continue;
       var cat=(r[13]||'').toString().trim();
+      if(_diag.adj_cats.indexOf(cat)===-1&&_diag.adj_cats.length<20)_diag.adj_cats.push(cat);
       if(cat!=='PM调整')continue;
       var sub=(r[14]||'').toString().trim();
       if(sub==='停机'||sub==='开机'||!sub)continue;
@@ -500,6 +509,12 @@ function processWorkbook(wb){
     }
   }
   lossDates=Object.keys(lossByLineDate).sort();
+  // 진단: 파싱 결과 팝업 표시
+  _diag.allRows=allRows.length;
+  _diag.lossDates=lossDates.length;
+  _diag.lossDates_sample=lossDates.slice(0,5);
+  _diag.adj_dates=allRows.slice(0,3).map(function(r){return r.dateStr+' '+r.eq+' '+r.sub});
+  alert('📊 진단정보\n시트: '+_diag.sheets.join(', ')+'\n\n调整履历: '+_diag.adj_sheet+' ('+_diag.adj_rows+'행)\nallRows: '+_diag.allRows+'\nlossDates: '+_diag.lossDates+'\n\n카테고리목록: '+_diag.adj_cats.join(', ')+'\n\n샘플 r[3]: '+(_diag.adj_sample[0]?_diag.adj_sample[0].r3+' (type:'+_diag.adj_sample[0].type3+')':'-')+'\n샘플 r[13]: '+(_diag.adj_sample[0]?_diag.adj_sample[0].r13:'-')+'\n샘플 r[14]: '+(_diag.adj_sample[0]?_diag.adj_sample[0].r14:'-')+'\n\nparseStDate 테스트: '+(_diag.adj_sample[0]?parseStDate(_diag.adj_sample[0].r3):'-'));
   if(allRows.length===0&&lossDates.length===0){alert(t('noDataFound'));return null}
   if(allRows.length===0){
     return {
