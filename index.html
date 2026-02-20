@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v3.7</title>
+<title>Production Performance v3.8</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -84,7 +84,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd">
-<h1>📊 Production Performance v3.7</h1>
+<h1>📊 Production Performance v3.8</h1>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
 <div class="file-bar">
@@ -183,7 +183,7 @@ function processWorkbook(wb){
   }
   if(allRows.length===0){alert('PM调整 데이터가 없습니다.');return null}
 
-  // === 시간대비분析 데이터 ===
+  // === 시간대비분석 데이터 ===
   function parseStDate(v){
     if(!v)return'';
     if(v instanceof Date){try{return v.toLocaleDateString('en-CA')}catch(e){return''}}
@@ -803,11 +803,11 @@ function renderAll(){
   document.getElementById('info').textContent=D.dateRange+' | PM调整 Only | 停机/开机 제외 | >1000분 제외 | 설비 '+D.eqCnt+'대';
 
   document.getElementById('tabArea').innerHTML=
-    '<div class="tab on" onclick="go(0)">📋 요약</div>'+
-    '<div class="tab" onclick="go(1)">📅 일자별 추이</div>'+
-    '<div class="tab" onclick="go(2)">🔥 히트맵(불량/일자)</div>'+
-    '<div class="tab" onclick="go(3)">🔥 히트맵(시간/일자)</div>'+
-    '<div class="tab" onclick="go(4)">⏱ 시간대비분析</div>';
+    '<div class="tab on" onclick="go(0)">📋 정지요약</div>'+
+    '<div class="tab" onclick="go(1)">📅 일자별현황</div>'+
+    '<div class="tab" onclick="go(2)">🔥 불량히트맵</div>'+
+    '<div class="tab" onclick="go(3)">🔥 정지히트맵</div>'+
+    '<div class="tab" onclick="go(4)">⏱ 시간대비분석</div>';
 
   var legend='<div class="lg"><div class="li"><div class="lc" style="background:#0a0a0a;border:1px solid #1a1a1a"></div>0</div><div class="li"><div class="lc" style="background:rgba(59,130,246,0.3)"></div>Low</div><div class="li"><div class="lc" style="background:rgba(251,191,36,0.5)"></div>Mid</div><div class="li"><div class="lc" style="background:rgba(239,68,68,0.7)"></div>High</div></div>';
 
@@ -947,7 +947,7 @@ function buildSTAnalysisPage(key,viewType){
   var btnStyle='padding:7px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid #2a2a2a;touch-action:manipulation';
   var onStyle=';background:#3b82f6;color:#fff;border-color:#3b82f6';
   var offStyle=';background:#1a1a1a;color:#94a3b8';
-  var h='<div class="bx"><h3>⏱ 시간대비분析</h3>';
+  var h='<div class="bx"><h3>⏱ 시간대비분석</h3>';
   // 디버그 패널
   var dbg=D._dbg||{};
   var dbgColor=dbg.rows>0?'#166534':'#7f1d1d';
