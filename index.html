@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v3.9</title>
+<title>Production Performance v4.0</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -84,7 +84,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd">
-<h1>📊 Production Performance v3.9</h1>
+<h1>📊 Production Performance v4.0</h1>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
 <div class="file-bar">
@@ -112,7 +112,7 @@ PM调整 데이터를 자동 분석합니다</p>
 
 <script>
 let D=null, charts=[];
-var DATA_VERSION='3.5'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='4.0'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 function handleFile(input){
   var file=input.files[0]; if(!file)return;
@@ -192,6 +192,7 @@ function processWorkbook(wb){
     return'';
   }
   var prodByDateEq={}, eqStRaw={}, dateToWeek={}, eqDates={}, eqWeekDates={};
+  var lossDetailByDateEq={}; // 상세 Loss용 설비별 데이터
   var _dbgAllSheets=wb.SheetNames.slice(); // 전체 시트명 복사
   var _dbgSheets=[],_dbgRows=0; // 디버그용
   for(var ni=0;ni<wb.SheetNames.length;ni++){
@@ -218,6 +219,13 @@ function processWorkbook(wb){
       if(wk2&&!dateToWeek[ds2])dateToWeek[ds2]=wk2;
       if(!eqDates[eq2])eqDates[eq2]={};eqDates[eq2][ds2]=1;
       if(wk2){if(!eqWeekDates[wk2])eqWeekDates[wk2]={};if(!eqWeekDates[wk2][eq2])eqWeekDates[wk2][eq2]={};eqWeekDates[wk2][eq2][ds2]=1;}
+      // 상세 Loss: col Y(24)~AK(36) = PM조정,완전불량,...,기술조정
+      var larr2=[];for(var lc0=24;lc0<=36;lc0++)larr2.push(typeof rj[lc0]==='number'?rj[lc0]:(parseFloat(rj[lc0])||0));
+      if(!lossDetailByDateEq[ds2])lossDetailByDateEq[ds2]={};
+      if(!lossDetailByDateEq[ds2][eq2])lossDetailByDateEq[ds2][eq2]={prod:0,st:0,larr:new Array(13).fill(0)};
+      lossDetailByDateEq[ds2][eq2].prod+=prod2;
+      if(st2>0)lossDetailByDateEq[ds2][eq2].st=st2;
+      for(var lc1=0;lc1<13;lc1++)lossDetailByDateEq[ds2][eq2].larr[lc1]+=larr2[lc1];
       _dbgRows++;
     }
   }
@@ -286,6 +294,29 @@ function processWorkbook(wb){
   });
   var weekList=Object.keys(prodByWeekEq).sort(function(a,b){return+a-+b});
 
+  // === 일간 LOSS 현황 (日별汇总) ===
+  var lossByLineDate={},lossAccumByLine={},lossDates=[];
+  for(var xi=0;xi<wb.SheetNames.length;xi++){
+    var xsn=wb.SheetNames[xi];
+    if(xsn.indexOf('日别汇总')===-1&&xsn.indexOf('日別汇总')===-1)continue;
+    var rawX=XLSX.utils.sheet_to_json(wb.Sheets[xsn],{header:1,defval:null,raw:true});
+    var lastXDate=null;
+    for(var xr=1;xr<rawX.length;xr++){
+      var rx=rawX[xr];if(!rx)continue;
+      if(rx[1]!=null){var ndx=parseStDate(rx[1]);if(ndx)lastXDate=ndx;}
+      if(!lastXDate)continue;
+      var rline=(rx[2]||'').toString().trim();if(!rline)continue;
+      var rprod=typeof rx[7]==='number'?rx[7]:(parseFloat(rx[7])||0);
+      var rkpi=typeof rx[16]==='number'?rx[16]:(parseFloat(rx[16])||0);
+      var rloss=typeof rx[17]==='number'?rx[17]:(parseFloat(rx[17])||0);
+      if(!lossByLineDate[lastXDate])lossByLineDate[lastXDate]={};
+      lossByLineDate[lastXDate][rline]={r:rloss,p:rprod};
+      if(!lossAccumByLine[rline])lossAccumByLine[rline]={prod:0,loss:0};
+      lossAccumByLine[rline].prod+=rprod;lossAccumByLine[rline].loss+=rkpi;
+    }
+  }
+  lossDates=Object.keys(lossByLineDate).sort();
+
   var all_dates=[]; var dateSet={};
   for(var ai=0;ai<allRows.length;ai++){if(!dateSet[allRows[ai].ds]){dateSet[allRows[ai].ds]=1;all_dates.push(allRows[ai].ds)}}
   all_dates.sort();
@@ -332,6 +363,8 @@ function processWorkbook(wb){
     prodByDateEq:prodByDateEq,stopByDateEq:stopByDateEq,avgEqST:avgEqST,stDates:stDates,
     prodByWeekEq:prodByWeekEq,stopByWeekEq:stopByWeekEq,weekList:weekList,
     prodTotalEq:prodTotalEq,stopTotalEq:stopTotalEq,eqDates:eqDates,eqWeekDates:eqWeekDates,
+    lossByLineDate:lossByLineDate,lossAccumByLine:lossAccumByLine,lossDates:lossDates,
+    lossDetailByDateEq:lossDetailByDateEq,
     dataVersion:DATA_VERSION,
     _dbg:{sheets:_dbgAllSheets,matchedSheets:_dbgSheets,rows:_dbgRows,dates:Object.keys(prodByDateEq).length,weeks:weekList.length,eqs:Object.keys(prodTotalEq).filter(function(e){return(prodTotalEq[e]||0)>0})}
   };
@@ -794,6 +827,183 @@ function renderWorstWeekChart(){
   charts.push(ch);
 }
 
+// ===================== LOSS 요약 =====================
+var LOSS_LINE_COLORS={K1:'#3b82f6',K2:'#8b5cf6',G:'#06b6d4',H:'#22c55e',E:'#f59e0b',Total:'#f87171'};
+var LOSS_DETAIL_HDR=['PM조정','완전불량','공정불량','치수불량','Lead교체','Film교체','정지','원자재불량','품질샘플','2차불량','기록차이','M차이','기술조정'];
+var _lossSubView='daily',_lossDate='',_lossLine='K1';
+var LOSS_TARGET=0.06;
+
+function eqToLine(eq){
+  if(!eq)return'';
+  var n=parseInt(eq.slice(1));
+  if(eq[0]==='K'&&n<=8)return'K1';
+  if(eq[0]==='K'&&n>=9)return'K2';
+  return eq[0]==='G'?'G':eq[0]==='H'?'H':eq[0]==='E'?'E':'';
+}
+
+function fmtLoss(v){
+  if(v===null||v===undefined||v===''||v===0)return'-';
+  return(v*100).toFixed(2)+'%';
+}
+function lossClr(v){
+  if(!v||v===0)return'#64748b';
+  return v<=LOSS_TARGET?'#22c55e':'#ef4444';
+}
+
+function buildLossPage(){
+  if(!D)return'<div style="padding:20px;color:#94a3b8">데이터 없음</div>';
+  var bs='padding:7px 18px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid #2a2a2a';
+  var on=';background:#3b82f6;color:#fff;border-color:#3b82f6';
+  var off=';background:#1a1a1a;color:#94a3b8';
+  var h='<div class="bx"><h3>📉 LOSS 요약</h3>';
+  h+='<div style="display:flex;gap:8px;margin-bottom:16px">';
+  h+='<button style="'+bs+(_lossSubView==='daily'?on:off)+'" onclick="renderLoss(\'daily\')">📊 일간 Loss 현황</button>';
+  h+='<button style="'+bs+(_lossSubView==='detail'?on:off)+'" onclick="renderLoss(\'detail\')">🔍 상세 Loss 현황</button>';
+  h+='</div>';
+  h+=(_lossSubView==='daily'?buildLossDaily():buildLossDetail());
+  h+='</div>';
+  return h;
+}
+
+function buildLossDaily(){
+  var dates=D.lossDates||[];
+  if(!dates.length)return'<div style="color:#94a3b8;padding:20px;text-align:center">⚠ 日별汇总 시트 데이터 없음</div>';
+  var lines=['K1','K2','G','H','E'];
+  var all=lines.concat(['Total']);
+  var thS='background:#1e3a5f;color:#94a3b8;padding:5px 8px;font-size:11px;border:1px solid #2a2a2a;white-space:nowrap;text-align:center';
+  var tdS='padding:4px 8px;font-size:11px;border:1px solid #2a2a2a;text-align:center;white-space:nowrap';
+  var stickyA='position:sticky;left:0;z-index:1;';
+  var stickyB='position:sticky;left:52px;z-index:1;';
+  var h='<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">';
+  h+='<table style="border-collapse:collapse;min-width:max-content"><thead><tr>';
+  h+='<th style="'+thS+';'+stickyA+'background:#1e3a5f;min-width:52px">Line</th>';
+  h+='<th style="'+thS+';'+stickyB+'background:#1e3a5f;min-width:70px">누적</th>';
+  dates.forEach(function(dt){var d=new Date(dt+'T00:00:00');h+='<th style="'+thS+'">'+(d.getMonth()+1)+'/'+(d.getDate())+'</th>';});
+  h+='</tr></thead><tbody>';
+  all.forEach(function(ln){
+    var isT=ln==='Total';
+    var lc=LOSS_LINE_COLORS[ln]||'#94a3b8';
+    var rowBg=isT?'background:#1c2a3a;':'';
+    h+='<tr style="'+rowBg+'">';
+    h+='<td style="'+tdS+';'+stickyA+'background:'+(isT?'#1c2a3a':'#0a0a0a')+';color:'+lc+';font-weight:700;min-width:52px">'+ln+'</td>';
+    // 누적
+    var accum;
+    if(isT){
+      var tp=0,tl=0;lines.forEach(function(l){var a=D.lossAccumByLine[l]||{prod:0,loss:0};tp+=a.prod;tl+=a.loss;});
+      accum=tp>0?tl/tp:0;
+    } else {
+      var a2=D.lossAccumByLine[ln]||{prod:0,loss:0};
+      accum=a2.prod>0?a2.loss/a2.prod:0;
+    }
+    h+='<td style="'+tdS+';'+stickyB+'background:'+(isT?'#1c2a3a':'#0a0a0a')+';color:'+lossClr(accum)+';font-weight:700;min-width:70px">'+fmtLoss(accum)+'</td>';
+    dates.forEach(function(dt){
+      var v;
+      if(isT){
+        var tp2=0,tl2=0;lines.forEach(function(l){var dd=D.lossByLineDate[dt]&&D.lossByLineDate[dt][l];if(dd){tp2+=dd.p;tl2+=dd.p*dd.r;}});
+        v=tp2>0?tl2/tp2:0;
+      } else {
+        var dd2=D.lossByLineDate[dt]&&D.lossByLineDate[dt][ln];v=dd2?dd2.r:0;
+      }
+      h+='<td style="'+tdS+';color:'+lossClr(v)+'">'+fmtLoss(v)+'</td>';
+    });
+    h+='</tr>';
+  });
+  // 목표행
+  h+='<tr><td style="'+tdS+';'+stickyA+'background:#0a0a0a;color:#f59e0b;font-weight:700;min-width:52px">목표</td>';
+  h+='<td style="'+tdS+';'+stickyB+'background:#0a0a0a;color:#f59e0b;font-weight:700;min-width:70px">6.00%</td>';
+  dates.forEach(function(){h+='<td style="'+tdS+';color:#f59e0b">6.00%</td>';});
+  h+='</tr></tbody></table></div>';
+  h+='<div style="margin-top:20px"><canvas id="lossChart"></canvas></div>';
+  return h;
+}
+
+function buildLossDetail(){
+  var dates=D.lossDates&&D.lossDates.length?D.lossDates:(D.stDates||[]);
+  if(!dates.length)return'<div style="color:#94a3b8;padding:20px">데이터 없음</div>';
+  if(!_lossDate||dates.indexOf(_lossDate)<0)_lossDate=dates[dates.length-1];
+  var selS='background:#1a1a1a;color:#e2e8f0;border:1px solid #3b82f6;border-radius:6px;padding:5px 10px;font-size:13px;margin-left:6px';
+  var h='<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;align-items:center">';
+  h+='<div><label style="color:#94a3b8;font-size:13px">일자</label><select onchange="setLossDetail(this.value,\'date\')" style="'+selS+'">';
+  dates.slice().reverse().forEach(function(d){h+='<option value="'+d+'"'+(d===_lossDate?' selected':'')+'>'+d+'</option>';});
+  h+='</select></div>';
+  h+='<div><label style="color:#94a3b8;font-size:13px">라인</label><select onchange="setLossDetail(this.value,\'line\')" style="'+selS+'">';
+  ['K1','K2','G','H','E'].forEach(function(l){h+='<option value="'+l+'"'+(l===_lossLine?' selected':'')+'>'+l+'</option>';});
+  h+='</select></div></div>';
+  var dateData=D.lossDetailByDateEq[_lossDate]||{};
+  var eqList=Object.keys(dateData).filter(function(eq){return eqToLine(eq)===_lossLine&&dateData[eq].prod>0;}).sort();
+  if(!eqList.length)return h+'<div style="color:#94a3b8;padding:20px">선택 날짜/라인 데이터 없음</div>';
+  var thS='background:#1e3a5f;color:#94a3b8;padding:5px 8px;font-size:11px;border:1px solid #2a2a2a;white-space:nowrap;text-align:center';
+  var tdS='padding:4px 8px;font-size:11px;border:1px solid #2a2a2a;text-align:center;white-space:nowrap';
+  var stkL='position:sticky;left:0;z-index:1;';
+  h+='<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">';
+  h+='<table style="border-collapse:collapse;min-width:max-content"><thead><tr>';
+  h+='<th style="'+thS+';'+stkL+'background:#1e3a5f;min-width:56px">설비</th>';
+  h+='<th style="'+thS+'">계획(Capa)</th><th style="'+thS+'">생산실적</th><th style="'+thS+'">가동율</th><th style="'+thS+'">Loss율</th>';
+  LOSS_DETAIL_HDR.forEach(function(c){h+='<th style="'+thS+'">'+c+'</th>';});
+  h+='</tr></thead><tbody>';
+  var totProd=0,totCapa=0,totLarr=new Array(13).fill(0);
+  eqList.forEach(function(eq){
+    var d=dateData[eq];
+    var prod=d.prod||0;
+    var stA=getSTActual(eq)||(d.st>0?d.st:0);
+    var capa=stA>0?Math.round(86400/stA):0;
+    var util=capa>0?prod/capa:0;
+    var lossR=capa>0?Math.max(0,(capa-prod)/capa):0;
+    totProd+=prod;totCapa+=capa;
+    h+='<tr><td style="'+tdS+';'+stkL+'background:#0a0a0a;color:#93c5fd;font-weight:700;min-width:56px">'+eq+'</td>';
+    h+='<td style="'+tdS+'">'+capa.toLocaleString()+'</td>';
+    h+='<td style="'+tdS+'">'+Math.round(prod).toLocaleString()+'</td>';
+    h+='<td style="'+tdS+';color:'+(util>=0.9?'#22c55e':util>=0.7?'#f59e0b':'#ef4444')+'">'+( util>0?(util*100).toFixed(1)+'%':'-')+'</td>';
+    h+='<td style="'+tdS+';color:'+lossClr(lossR)+'">'+fmtLoss(lossR)+'</td>';
+    d.larr.forEach(function(v,i){totLarr[i]+=v;h+='<td style="'+tdS+'">'+(prod>0&&v>0?(v/prod*100).toFixed(2)+'%':'-')+'</td>';});
+    h+='</tr>';
+  });
+  // Total 행
+  var totUtil=totCapa>0?totProd/totCapa:0;
+  var totLoss=totCapa>0?Math.max(0,(totCapa-totProd)/totCapa):0;
+  h+='<tr style="background:#1c2a3a;font-weight:700">';
+  h+='<td style="'+tdS+';'+stkL+'background:#1c2a3a;color:#fcd34d;min-width:56px">합계</td>';
+  h+='<td style="'+tdS+'">'+totCapa.toLocaleString()+'</td>';
+  h+='<td style="'+tdS+'">'+Math.round(totProd).toLocaleString()+'</td>';
+  h+='<td style="'+tdS+';color:'+(totUtil>=0.9?'#22c55e':totUtil>=0.7?'#f59e0b':'#ef4444')+'">'+( totUtil>0?(totUtil*100).toFixed(1)+'%':'-')+'</td>';
+  h+='<td style="'+tdS+';color:'+lossClr(totLoss)+'">'+fmtLoss(totLoss)+'</td>';
+  totLarr.forEach(function(v){h+='<td style="'+tdS+'">'+(totProd>0&&v>0?(v/totProd*100).toFixed(2)+'%':'-')+'</td>';});
+  h+='</tr>';
+  h+='</tbody></table></div>';
+  return h;
+}
+
+function renderLoss(subView){
+  _lossSubView=subView||'daily';
+  var panel=document.getElementById('lossPanel');
+  if(panel){panel.innerHTML=buildLossPage();if(_lossSubView==='daily')initLossChart();}
+}
+function setLossDetail(val,field){
+  if(field==='date')_lossDate=val; else if(field==='line')_lossLine=val;
+  renderLoss('detail');
+}
+function initLossChart(){
+  var canvas=document.getElementById('lossChart');
+  if(!canvas||!D||!D.lossDates||!D.lossDates.length)return;
+  var dates=D.lossDates;
+  var lines=['K1','K2','G','H','E'];
+  var datasets=lines.map(function(ln){
+    return{label:ln,data:dates.map(function(dt){var v=D.lossByLineDate[dt]&&D.lossByLineDate[dt][ln];return v&&v.r>0?Math.round(v.r*10000)/100:null;}),
+      borderColor:LOSS_LINE_COLORS[ln],backgroundColor:'transparent',pointRadius:3,tension:0.3,spanGaps:true};
+  });
+  datasets.push({label:'목표(6%)',data:dates.map(function(){return 6;}),borderColor:'#f59e0b',borderDash:[5,5],pointRadius:0,tension:0});
+  var ctx=canvas.getContext('2d');
+  var ch=new Chart(ctx,{type:'line',
+    data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),datasets:datasets},
+    options:{responsive:true,
+      plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}}}},
+      scales:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'#1f2937'}},
+        y:{ticks:{color:'#94a3b8',font:{size:10},callback:function(v){return v+'%'}},grid:{color:'#1f2937'},min:0,
+          title:{display:true,text:'Loss율(%)',color:'#64748b',font:{size:10}}}}}});
+  charts.push(ch);
+}
+// ===================== LOSS 끝 =====================
+
 function renderAll(){
   charts.forEach(function(c){try{c.destroy()}catch(e){}});charts=[];
   if(!D)return;
@@ -803,16 +1013,18 @@ function renderAll(){
   document.getElementById('info').textContent=D.dateRange+' | PM调整 Only | 停机/开机 제외 | >1000분 제외 | 설비 '+D.eqCnt+'대';
 
   document.getElementById('tabArea').innerHTML=
-    '<div class="tab on" onclick="go(0)">📋 정지요약</div>'+
-    '<div class="tab" onclick="go(1)">📅 일자별현황</div>'+
-    '<div class="tab" onclick="go(2)">🔥 불량히트맵</div>'+
-    '<div class="tab" onclick="go(3)">🔥 정지히트맵</div>'+
-    '<div class="tab" onclick="go(4)">⏱ 시간대비분석</div>';
+    '<div class="tab on" onclick="go(0)">📉 LOSS요약</div>'+
+    '<div class="tab" onclick="go(1)">📋 정지요약</div>'+
+    '<div class="tab" onclick="go(2)">📅 일자별현황</div>'+
+    '<div class="tab" onclick="go(3)">🔥 불량히트맵</div>'+
+    '<div class="tab" onclick="go(4)">🔥 정지히트맵</div>'+
+    '<div class="tab" onclick="go(5)">⏱ 시간대비분석</div>';
 
   var legend='<div class="lg"><div class="li"><div class="lc" style="background:#0a0a0a;border:1px solid #1a1a1a"></div>0</div><div class="li"><div class="lc" style="background:rgba(59,130,246,0.3)"></div>Low</div><div class="li"><div class="lc" style="background:rgba(251,191,36,0.5)"></div>Mid</div><div class="li"><div class="lc" style="background:rgba(239,68,68,0.7)"></div>High</div></div>';
 
   document.getElementById('root').innerHTML=
-  '<div class="pn on" id="summaryPanel">'+buildSummaryPage()+'</div>'+
+  '<div class="pn on" id="lossPanel">'+buildLossPage()+'</div>'+
+  '<div class="pn" id="summaryPanel">'+buildSummaryPage()+'</div>'+
   '<div class="pn">'+
     '<div class="bx"><h3>📅 전체 일자별 정지시간 / 불량수량<em>Total '+D.totalRec.toLocaleString()+'건</em></h3><canvas id="dAll"></canvas></div>'+
     '<div class="bx"><h3>📊 전체 정지 vs 비정지</h3><div class="hc" id="tAllS"></div></div>'+
@@ -848,6 +1060,7 @@ function renderAll(){
 
   document.getElementById('hm_def').innerHTML=buildDailyHT(D.hm_def,'불량수량',D.eq_order,D.all_dates);
   document.getElementById('hm_time').innerHTML=buildDailyHT(D.hm_time,'time',D.eq_order,D.all_dates);
+  initLossChart();
 }
 
 var ST_EQ_LIST=['K07','K08','K09','K10','K11','K12','K13','K14','H01','H02','H03','H04','H07','H08','H09','H10','G15','G16','G17','G18'];
