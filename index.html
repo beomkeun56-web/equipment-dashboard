@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v4.0</title>
+<title>Production Performance v4.1</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -181,7 +181,44 @@ function processWorkbook(wb){
       allRows.push({ds:ds,eq:eq,sub:sub,detail:detail,defect:defect,time:time,stop:stopYN==='停',line:line,dateStr:dateStr});
     }
   }
-  if(allRows.length===0){alert('PM调整 데이터가 없습니다.');return null}
+  var _dbgAllSheets=wb.SheetNames.slice();
+  // === 일간 LOSS 현황 (日별汇總) - allRows 체크 전에 먼저 읽기 ===
+  var lossByLineDate={},lossAccumByLine={},lossDates=[];
+  for(var xi=0;xi<wb.SheetNames.length;xi++){
+    var xsn=wb.SheetNames[xi];
+    if(xsn.indexOf('日别汇总')===-1&&xsn.indexOf('日別汇总')===-1)continue;
+    var rawX=XLSX.utils.sheet_to_json(wb.Sheets[xsn],{header:1,defval:null,raw:true});
+    var lastXDate=null;
+    for(var xr=1;xr<rawX.length;xr++){
+      var rx=rawX[xr];if(!rx)continue;
+      if(rx[1]!=null){var ndx=parseStDate(rx[1]);if(ndx)lastXDate=ndx;}
+      if(!lastXDate)continue;
+      var rline=(rx[2]||'').toString().trim();if(!rline)continue;
+      var rprod=typeof rx[7]==='number'?rx[7]:(parseFloat(rx[7])||0);
+      var rkpi=typeof rx[16]==='number'?rx[16]:(parseFloat(rx[16])||0);
+      var rloss=typeof rx[17]==='number'?rx[17]:(parseFloat(rx[17])||0);
+      if(!lossByLineDate[lastXDate])lossByLineDate[lastXDate]={};
+      lossByLineDate[lastXDate][rline]={r:rloss,p:rprod};
+      if(!lossAccumByLine[rline])lossAccumByLine[rline]={prod:0,loss:0};
+      lossAccumByLine[rline].prod+=rprod;lossAccumByLine[rline].loss+=rkpi;
+    }
+  }
+  lossDates=Object.keys(lossByLineDate).sort();
+  if(allRows.length===0&&lossDates.length===0){alert('데이터를 찾을 수 없습니다.');return null}
+  if(allRows.length===0){
+    return {
+      daily:[],daily_G:[],daily_H:[],daily_K:[],all_dates:[],eq_order:[],
+      line_equips:{G:[],H:[],K:[]},hm_def:[],hm_time:[],allRows:[],
+      totalRec:0,totalDef:0,totalTime:0,stopCnt:0,eqCnt:0,
+      dateRange:'데이터 없음',lineSummary:{G:{cnt:0,eq:0},H:{cnt:0,eq:0},K:{cnt:0,eq:0}},
+      prodByDateEq:{},stopByDateEq:{},avgEqST:{},stDates:[],
+      prodByWeekEq:{},stopByWeekEq:{},weekList:[],
+      prodTotalEq:{},stopTotalEq:{},eqDates:{},eqWeekDates:{},
+      lossByLineDate:lossByLineDate,lossAccumByLine:lossAccumByLine,lossDates:lossDates,
+      lossDetailByDateEq:{},dataVersion:DATA_VERSION,
+      _dbg:{sheets:_dbgAllSheets,matchedSheets:[],rows:0,dates:0,weeks:0,eqs:[]}
+    };
+  }
 
   // === 시간대비분석 데이터 ===
   function parseStDate(v){
@@ -193,7 +230,6 @@ function processWorkbook(wb){
   }
   var prodByDateEq={}, eqStRaw={}, dateToWeek={}, eqDates={}, eqWeekDates={};
   var lossDetailByDateEq={}; // 상세 Loss용 설비별 데이터
-  var _dbgAllSheets=wb.SheetNames.slice(); // 전체 시트명 복사
   var _dbgSheets=[],_dbgRows=0; // 디버그용
   for(var ni=0;ni<wb.SheetNames.length;ni++){
     var nsn=wb.SheetNames[ni];
@@ -293,30 +329,6 @@ function processWorkbook(wb){
     });
   });
   var weekList=Object.keys(prodByWeekEq).sort(function(a,b){return+a-+b});
-
-  // === 일간 LOSS 현황 (日별汇总) ===
-  var lossByLineDate={},lossAccumByLine={},lossDates=[];
-  for(var xi=0;xi<wb.SheetNames.length;xi++){
-    var xsn=wb.SheetNames[xi];
-    if(xsn.indexOf('日别汇总')===-1&&xsn.indexOf('日別汇总')===-1)continue;
-    var rawX=XLSX.utils.sheet_to_json(wb.Sheets[xsn],{header:1,defval:null,raw:true});
-    var lastXDate=null;
-    for(var xr=1;xr<rawX.length;xr++){
-      var rx=rawX[xr];if(!rx)continue;
-      if(rx[1]!=null){var ndx=parseStDate(rx[1]);if(ndx)lastXDate=ndx;}
-      if(!lastXDate)continue;
-      var rline=(rx[2]||'').toString().trim();if(!rline)continue;
-      var rprod=typeof rx[7]==='number'?rx[7]:(parseFloat(rx[7])||0);
-      var rkpi=typeof rx[16]==='number'?rx[16]:(parseFloat(rx[16])||0);
-      var rloss=typeof rx[17]==='number'?rx[17]:(parseFloat(rx[17])||0);
-      if(!lossByLineDate[lastXDate])lossByLineDate[lastXDate]={};
-      lossByLineDate[lastXDate][rline]={r:rloss,p:rprod};
-      if(!lossAccumByLine[rline])lossAccumByLine[rline]={prod:0,loss:0};
-      lossAccumByLine[rline].prod+=rprod;lossAccumByLine[rline].loss+=rkpi;
-    }
-  }
-  lossDates=Object.keys(lossByLineDate).sort();
-
   var all_dates=[]; var dateSet={};
   for(var ai=0;ai<allRows.length;ai++){if(!dateSet[allRows[ai].ds]){dateSet[allRows[ai].ds]=1;all_dates.push(allRows[ai].ds)}}
   all_dates.sort();
