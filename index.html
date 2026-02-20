@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>설비조정이력 분析 v3.0</title>
+<title>설비조정이력 분析 v3.1</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -84,7 +84,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd">
-<h1>📊 설비조정이력 분析 v3.0</h1>
+<h1>📊 설비조정이력 분析 v3.1</h1>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
 <div class="file-bar">
@@ -195,13 +195,18 @@ function processWorkbook(wb){
     var nsn=wb.SheetNames[ni];
     if(nsn.indexOf('日报')===-1)continue;
     var raw2=XLSX.utils.sheet_to_json(wb.Sheets[nsn],{header:1,defval:null,raw:true});
+    var lastDate2=null,lastWeek2=null; // 병합셀 전파용
     for(var j=2;j<raw2.length;j++){
-      var rj=raw2[j]; if(!rj||rj[3]==null||!rj[4])continue;
-      var ds2=parseStDate(rj[3]); if(!ds2)continue;
+      var rj=raw2[j]; if(!rj)continue;
+      // 병합셀 처리: 값이 있을 때만 갱신, 없으면 이전 값 유지
+      if(rj[3]!=null){var nd2=parseStDate(rj[3]);if(nd2)lastDate2=nd2;}
+      if(rj[2]!=null){var nw2=(rj[2]||'').toString().trim();if(nw2)lastWeek2=nw2;}
+      if(!lastDate2||!rj[4])continue;
+      var ds2=lastDate2;
       var eq2=(rj[4]||'').toString().trim().toUpperCase(); if(!eq2)continue;
       var prod2=typeof rj[11]==='number'?rj[11]:(parseFloat(rj[11])||0);
       var st2=typeof rj[12]==='number'?rj[12]:(parseFloat(rj[12])||0);
-      var wk2=(rj[2]||'').toString().trim();
+      var wk2=lastWeek2||'';
       if(!prodByDateEq[ds2])prodByDateEq[ds2]={};
       prodByDateEq[ds2][eq2]=(prodByDateEq[ds2][eq2]||0)+prod2;
       if(st2>0){if(!eqStRaw[eq2])eqStRaw[eq2]={s:0,n:0};eqStRaw[eq2].s+=st2;eqStRaw[eq2].n++}
@@ -215,10 +220,13 @@ function processWorkbook(wb){
     var ksn=wb.SheetNames[ki];
     if(ksn.indexOf('调整履历')===-1)continue;
     var raw3=XLSX.utils.sheet_to_json(wb.Sheets[ksn],{header:1,defval:null,raw:true});
+    var lastDate3=null; // 병합셀 전파용
     for(var k=2;k<raw3.length;k++){
-      var rk=raw3[k]; if(!rk||rk[3]==null||!rk[4])continue;
+      var rk=raw3[k]; if(!rk)continue;
+      if(rk[3]!=null){var nd3=parseStDate(rk[3]);if(nd3)lastDate3=nd3;}
+      if(!lastDate3||!rk[4])continue;
       if((rk[19]||'').toString().trim()!=='停')continue;
-      var ds3=parseStDate(rk[3]); if(!ds3)continue;
+      var ds3=lastDate3;
       var eq3=(rk[4]||'').toString().trim().toUpperCase(); if(!eq3)continue;
       var sm=typeof rk[20]==='number'?rk[20]:(parseFloat(rk[20])||0);
       if(!stopByDateEq[ds3])stopByDateEq[ds3]={};
