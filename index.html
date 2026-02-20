@@ -398,7 +398,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='7.6'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='7.7'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -507,26 +507,27 @@ function processWorkbook(wb){
       if(!dateStr)continue;
       var eq=(r[4]||'').toString().trim().toUpperCase();
       if(!eq)continue;
-      // stopByDateEq: 停 행
-      if((r[19]||'').toString().trim()==='停'){
+      // stopByDateEq: 모든 停 행 (히트맵용)
+      var _stopYN=(r[19]||'').toString().trim();
+      if(_stopYN==='停'){
         var sm=typeof r[20]==='number'?r[20]:(parseFloat(r[20])||0);
         if(!stopByDateEq[dateStr])stopByDateEq[dateStr]={};
         stopByDateEq[dateStr][eq]=(stopByDateEq[dateStr][eq]||0)+sm;
       }
-      // allRows: PM调整 행
-      var cat=(r[13]||'').toString().trim();
-      if(cat!=='PM调整')continue;
-      var sub=(r[14]||'').toString().trim();
-      if(sub==='停机'||sub==='开机'||!sub)continue;
-      // KPI용 정지시간: PM调整 + 停机/开机 제외 + 停 행만 + col20 시간 (time>1000 필터 전에 수집)
-      var stopYN=(r[19]||'').toString().trim();
-      if(stopYN==='停'){
+      // KPI용 정지시간: 全카테고리 停 행 + 停机/开机 제외 + col20 (PM调整 필터 전에 수집)
+      var _kpiSub=(r[14]||'').toString().trim();
+      if(_stopYN==='停' && _kpiSub!=='停机' && _kpiSub!=='开机' && _kpiSub){
         var kpiSm=typeof r[20]==='number'?r[20]:(parseFloat(r[20])||0);
         if(kpiSm>0){
           if(!kpiStopByDateEq[dateStr])kpiStopByDateEq[dateStr]={};
           kpiStopByDateEq[dateStr][eq]=(kpiStopByDateEq[dateStr][eq]||0)+kpiSm;
         }
       }
+      // allRows: PM调整 행만
+      var cat=(r[13]||'').toString().trim();
+      if(cat!=='PM调整')continue;
+      var sub=(r[14]||'').toString().trim();
+      if(sub==='停机'||sub==='开机'||!sub)continue;
       var dtParts=dateStr.split('-');
       var ds=dtParts[1]+'/'+dtParts[2];
       var stopTime=parseFloat(r[11])||0, nonStopTime=parseFloat(r[12])||0;
