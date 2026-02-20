@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v4.5</title>
+<title>Production Performance v4.6</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -84,7 +84,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd">
-<h1>📊 Production Performance v4.5</h1>
+<h1>📊 Production Performance v4.6</h1>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
 <div class="file-bar">
@@ -112,7 +112,7 @@ PM调整 데이터를 자동 분석합니다</p>
 
 <script>
 let D=null, charts=[];
-var DATA_VERSION='4.5'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='4.6'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 function handleFile(input){
   var file=input.files[0]; if(!file)return;
@@ -210,6 +210,7 @@ function processWorkbook(wb){
       var rprod=typeof rx[6]==='number'?rx[6]:(parseFloat(rx[6])||0);
       var rkpi=typeof rx[15]==='number'?rx[15]:(parseFloat(rx[15])||0);
       var rloss=typeof rx[16]==='number'?rx[16]:(parseFloat(rx[16])||0);
+      if(rloss>=1.0)continue; // 100% 이상은 오류 데이터 제외
       if(!lossByLineDate[lastXDate])lossByLineDate[lastXDate]={};
       lossByLineDate[lastXDate][rline]={r:rloss,p:rprod};
       if(!lossAccumByLine[rline])lossAccumByLine[rline]={prod:0,loss:0};
