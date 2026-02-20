@@ -182,6 +182,47 @@ function processWorkbook(wb){
   }
   if(allRows.length===0){alert('PM调整 데이터가 없습니다.');return null}
 
+  // === 시간대비분析 데이터 ===
+  var prodByDateEq={}, eqStRaw={};
+  ['N1 日报','N2 日报'].forEach(function(sn){
+    if(wb.SheetNames.indexOf(sn)===-1)return;
+    var raw2=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:null,raw:false});
+    for(var j=2;j<raw2.length;j++){
+      var rj=raw2[j]; if(!rj||!rj[3]||!rj[4])continue;
+      var dt2=rj[3],ds2='';
+      if(dt2 instanceof Date){try{ds2=new Date(dt2).toLocaleDateString('en-CA')}catch(e){continue}}
+      else if(typeof dt2==='string'){ds2=dt2.slice(0,10)}
+      else if(typeof dt2==='number'){var d3=new Date((dt2-25569)*86400000);ds2=d3.toISOString().slice(0,10)}
+      if(!ds2)continue;
+      var eq2=(rj[4]||'').toString().trim().toUpperCase(); if(!eq2)continue;
+      var prod2=parseFloat(rj[11])||0, st2=parseFloat(rj[12])||0;
+      if(!prodByDateEq[ds2])prodByDateEq[ds2]={};
+      prodByDateEq[ds2][eq2]=(prodByDateEq[ds2][eq2]||0)+prod2;
+      if(st2>0){if(!eqStRaw[eq2])eqStRaw[eq2]={s:0,n:0};eqStRaw[eq2].s+=st2;eqStRaw[eq2].n++}
+    }
+  });
+  var stopByDateEq={};
+  ['N1 调整履历','N2 调整履历'].forEach(function(sn){
+    if(wb.SheetNames.indexOf(sn)===-1)return;
+    var raw3=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:null,raw:false});
+    for(var k=2;k<raw3.length;k++){
+      var rk=raw3[k]; if(!rk||!rk[3]||!rk[4])continue;
+      if((rk[19]||'').toString().trim()!=='停')continue;
+      var dt3=rk[3],ds3='';
+      if(dt3 instanceof Date){try{ds3=new Date(dt3).toLocaleDateString('en-CA')}catch(e){continue}}
+      else if(typeof dt3==='string'){ds3=dt3.slice(0,10)}
+      else if(typeof dt3==='number'){var d4=new Date((dt3-25569)*86400000);ds3=d4.toISOString().slice(0,10)}
+      if(!ds3)continue;
+      var eq3=(rk[4]||'').toString().trim().toUpperCase(); if(!eq3)continue;
+      var sm=parseFloat(rk[20])||0;
+      if(!stopByDateEq[ds3])stopByDateEq[ds3]={};
+      stopByDateEq[ds3][eq3]=(stopByDateEq[ds3][eq3]||0)+sm;
+    }
+  });
+  var avgEqST={};
+  Object.keys(eqStRaw).forEach(function(eq){if(eqStRaw[eq].n>0)avgEqST[eq]=eqStRaw[eq].s/eqStRaw[eq].n});
+  var stDates=Object.keys(prodByDateEq).sort();
+
   var all_dates=[]; var dateSet={};
   for(var ai=0;ai<allRows.length;ai++){if(!dateSet[allRows[ai].ds]){dateSet[allRows[ai].ds]=1;all_dates.push(allRows[ai].ds)}}
   all_dates.sort();
@@ -224,7 +265,8 @@ function processWorkbook(wb){
     stopCnt:allRows.filter(function(r){return r.stop}).length,
     eqCnt:eq_order.length,
     dateRange:all_dates[0]+' ~ '+all_dates[all_dates.length-1],
-    lineSummary:lineSummary
+    lineSummary:lineSummary,
+    prodByDateEq:prodByDateEq,stopByDateEq:stopByDateEq,avgEqST:avgEqST,stDates:stDates
   };
 }
 
@@ -697,7 +739,8 @@ function renderAll(){
     '<div class="tab on" onclick="go(0)">📋 요약</div>'+
     '<div class="tab" onclick="go(1)">📅 일자별 추이</div>'+
     '<div class="tab" onclick="go(2)">🔥 히트맵(불량/일자)</div>'+
-    '<div class="tab" onclick="go(3)">🔥 히트맵(시간/일자)</div>';
+    '<div class="tab" onclick="go(3)">🔥 히트맵(시간/일자)</div>'+
+    (D.stDates&&D.stDates.length?'<div class="tab" onclick="go(4)">⏱ 시간대비분析</div>':'');
 
   var legend='<div class="lg"><div class="li"><div class="lc" style="background:#0a0a0a;border:1px solid #1a1a1a"></div>0</div><div class="li"><div class="lc" style="background:rgba(59,130,246,0.3)"></div>Low</div><div class="li"><div class="lc" style="background:rgba(251,191,36,0.5)"></div>Mid</div><div class="li"><div class="lc" style="background:rgba(239,68,68,0.7)"></div>High</div></div>';
 
@@ -717,7 +760,8 @@ function renderAll(){
     '<div class="bx" style="border-left:3px solid #f59e0b"><h3><span class="line-label" style="background:#f59e0b20;color:#f59e0b">K Line</span> 정지 vs 비정지</h3><div id="tKS"></div></div>'+
   '</div>'+
   '<div class="pn"><div class="bx"><h3>🔥 설비 일자별 불량수량</h3>'+legend+'<div class="hc" id="hm_def"></div></div></div>'+
-  '<div class="pn"><div class="bx"><h3>🔥 설비 일자별 조정시간(분)</h3>'+legend+'<div class="hc" id="hm_time"></div></div></div>';
+  '<div class="pn"><div class="bx"><h3>🔥 설비 일자별 조정시간(분)</h3>'+legend+'<div class="hc" id="hm_time"></div></div></div>'+
+  (D.stDates&&D.stDates.length?'<div class="pn" id="stAnalysisPanel">'+buildSTAnalysisPage(D.stDates[D.stDates.length-1])+'</div>':'');
 
   // Render summary chart
   renderWorstWeekChart();
@@ -737,6 +781,100 @@ function renderAll(){
 
   document.getElementById('hm_def').innerHTML=buildDailyHT(D.hm_def,'불량수량',D.eq_order,D.all_dates);
   document.getElementById('hm_time').innerHTML=buildDailyHT(D.hm_time,'time',D.eq_order,D.all_dates);
+}
+
+var ST_EQ_LIST=['K07','K08','K09','K10','K11','K12','K13','K14','H01','H02','H03','H04','H07','H08','H09','H10','G15','G16','G17','G18'];
+
+function getSTActual(eq){
+  if(eq==='K13'||eq==='K14')return 1.85;
+  if(eq[0]==='H')return 3.75;
+  var avgST=(D.avgEqST||{})[eq]||0; if(!avgST)return null;
+  if(['K09','K10','K11','K12'].indexOf(eq)>=0)return avgST/4;
+  return avgST/2;
+}
+
+function buildSTAnalysisPage(dateStr){
+  if(!D||!D.stDates||!D.stDates.length)return'<div style="padding:20px;color:#94a3b8">생산 데이터가 없습니다</div>';
+  var prod=(D.prodByDateEq||{})[dateStr]||{};
+  var stop=(D.stopByDateEq||{})[dateStr]||{};
+  var sumCapa=0,sumProd=0,sumStop=0,sumStopQty=0;
+  var rows=[];
+  ST_EQ_LIST.forEach(function(eq){
+    var stA=getSTActual(eq); if(!stA)return;
+    var capa=86400/stA;
+    var production=prod[eq]||0;
+    var stopTime=stop[eq]||0;
+    var stopQty=stopTime>0?(stopTime*60/stA):0;
+    var rate=production>0?production/capa:0;
+    var diff=production>0?production-capa:null;
+    var cvDiff=diff!==null?(diff>0?diff-stopQty:diff+stopQty):null;
+    var conclu=cvDiff===null?'':(Math.abs(cvDiff)>500?(diff>0?'S/T 이상':'기록이상'):'정상');
+    sumCapa+=capa; sumProd+=production; sumStop+=stopTime; sumStopQty+=stopQty;
+    rows.push({eq:eq,stA:stA,capa:capa,prod:production,rate:rate,diff:diff,stopTime:stopTime,stopQty:stopQty,cvDiff:cvDiff,conclu:conclu});
+  });
+  var sumDiff=sumProd>0?sumProd-sumCapa:null;
+  var sumCvDiff=sumDiff!==null?(sumDiff>0?sumDiff-sumStopQty:sumDiff+sumStopQty):null;
+  var sumConclu=sumCvDiff===null?'':(Math.abs(sumCvDiff)>500?(sumDiff>0?'S/T 이상':'기록이상'):'정상');
+
+  function concluCell(v){if(!v)return'<td></td>';if(v==='정상')return'<td class="good">정상</td>';return'<td class="bad">'+v+'</td>'}
+  function diffCell(v,colored){if(v===null||v===undefined)return'<td></td>';var s=(v>=0?'+':'')+Math.round(v).toLocaleString();return'<td style="color:'+(v>=0?'#22c55e':'#ef4444')+';font-weight:700">'+s+'</td>'}
+
+  var h='<div class="bx"><h3>⏱ 시간대비분析 <em>일자: '+dateStr+'</em></h3>';
+  h+='<div style="margin-bottom:10px">';
+  h+='<label style="color:#94a3b8;font-size:13px">일자 선택: </label>';
+  h+='<select onchange="renderSTAnalysis(this.value)" style="background:#1a1a1a;color:#e2e8f0;border:1px solid #3b82f6;border-radius:6px;padding:5px 10px;font-size:13px">';
+  (D.stDates||[]).slice().reverse().forEach(function(d){h+='<option value="'+d+'"'+(d===dateStr?' selected':'')+'>'+d+'</option>'});
+  h+='</select></div>';
+  h+='<div class="hc"><table class="ht"><thead><tr>';
+  h+='<th>설비</th><th>S/T실제(초)</th><th>Capa</th><th>생산량</th><th>가동율</th><th>차이</th><th>정지시간(분)</th><th>수량환산</th><th>환산차이</th><th>결론</th>';
+  h+='</tr></thead><tbody>';
+  // 요약행
+  var sSt=sumProd>0?(sumProd/sumCapa*100).toFixed(1)+'%':'';
+  h+='<tr style="background:#1e3a5f;font-weight:700">';
+  h+='<th style="color:#fcd34d;background:#1e3a5f">요약</th><td style="background:#1e3a5f"></td>';
+  h+='<td style="color:#60a5fa">'+Math.round(sumCapa).toLocaleString()+'</td>';
+  h+='<td style="color:#60a5fa">'+Math.round(sumProd).toLocaleString()+'</td>';
+  h+='<td style="color:#60a5fa">'+sSt+'</td>';
+  h+=diffCell(sumDiff,true);
+  h+='<td>'+Math.round(sumStop).toLocaleString()+'</td>';
+  h+='<td>'+Math.round(sumStopQty).toLocaleString()+'</td>';
+  h+=diffCell(sumCvDiff,true);
+  h+=concluCell(sumConclu);
+  h+='</tr>';
+  // 라인 구분 헤더 변수
+  var lastLine='';
+  rows.forEach(function(r){
+    var curLine=r.eq[0];
+    if(curLine!==lastLine){
+      var lineColors={K:'#f59e0b',H:'#22c55e',G:'#06b6d4'};
+      h+='<tr><th colspan="10" style="background:'+lineColors[curLine]+'22;color:'+lineColors[curLine]+';text-align:left;padding:4px 8px;font-size:11px">'+curLine+' Line</th></tr>';
+      lastLine=curLine;
+    }
+    h+='<tr>';
+    h+='<th style="color:#93c5fd">'+r.eq+'</th>';
+    h+='<td>'+r.stA.toFixed(3)+'</td>';
+    h+='<td>'+Math.round(r.capa).toLocaleString()+'</td>';
+    h+='<td>'+(r.prod>0?Math.round(r.prod).toLocaleString():'<span style="color:#4b5563">0</span>')+'</td>';
+    h+='<td>'+(r.rate>0?(r.rate*100).toFixed(1)+'%':'')+'</td>';
+    h+=diffCell(r.diff,true);
+    h+='<td>'+(r.stopTime>0?Math.round(r.stopTime).toLocaleString():'')+'</td>';
+    h+='<td>'+(r.stopQty>0?Math.round(r.stopQty).toLocaleString():'')+'</td>';
+    h+=diffCell(r.cvDiff,true);
+    h+=concluCell(r.conclu);
+    h+='</tr>';
+  });
+  h+='</tbody></table></div>';
+  h+='<div style="margin-top:8px;font-size:11px;color:#94a3b8">';
+  h+='S/T실제: K07/K08/G라인=ST÷2, K09~K12=ST÷4, K13/K14=1.85초, H라인=3.75초 고정 | ';
+  h+='환산차이: 차이>0이면 차이-수량환산, 차이&lt;0이면 차이+수량환산 | ';
+  h+='결론: |환산차이|>500 → S/T이상/기록이상</div>';
+  h+='</div>';
+  return h;
+}
+
+function renderSTAnalysis(dateStr){
+  var panel=document.getElementById('stAnalysisPanel');
+  if(panel)panel.innerHTML=buildSTAnalysisPage(dateStr);
 }
 
 function clearData(){
