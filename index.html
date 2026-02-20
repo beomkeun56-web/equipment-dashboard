@@ -195,8 +195,8 @@ function processWorkbook(wb){
       if(!lastXDate)continue;
       var rline=(rx[2]||'').toString().trim();if(!rline)continue;
       var rprod=typeof rx[7]==='number'?rx[7]:(parseFloat(rx[7])||0);
-      var rkpi=typeof rx[16]==='number'?rx[16]:(parseFloat(rx[16])||0);
-      var rloss=typeof rx[17]==='number'?rx[17]:(parseFloat(rx[17])||0);
+      var rkpi=typeof rx[16]==='number'?rx[16]:(parseFloat(rx[16])||0);   // col[16]=KPI Loss 废弃数(개수, 누적계산용)
+      var rloss=typeof rx[17]==='number'?rx[17]:(parseFloat(rx[17])||0);  // col[17]=KPI Loss 비율(decimal, 표시용)
       if(!lossByLineDate[lastXDate])lossByLineDate[lastXDate]={};
       lossByLineDate[lastXDate][rline]={r:rloss,p:rprod};
       if(!lossAccumByLine[rline])lossAccumByLine[rline]={prod:0,loss:0};
