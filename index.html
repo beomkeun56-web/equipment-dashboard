@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v6.7</title>
+<title>Production Performance v6.8</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v6.7</h1>
+<h1>📊 Production Performance v6.8</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -396,7 +396,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='6.7'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='6.8'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 function handleFile(input){
   var file=input.files[0]; if(!file)return;
@@ -1499,7 +1499,15 @@ function initUtilCharts(){
       var uv=dd.u>1?dd.u:dd.u*100;
       return Math.round(uv*100)/100;
     });
+    var _utilLabelPlugin={id:'utilLabel_'+g.key,afterDatasetsDraw:function(chart){
+      var ds=chart.data.datasets[0];if(!ds)return;
+      var meta=chart.getDatasetMeta(0);
+      var ctx=chart.ctx;ctx.save();ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';
+      meta.data.forEach(function(pt,i){var v=ds.data[i];if(v==null)return;ctx.fillStyle=g.color;ctx.fillText(Math.round(v)+'%',pt.x,pt.y-5);});
+      ctx.restore();
+    }};
     var ch=new Chart(canvas,{type:'line',
+      plugins:[_utilLabelPlugin],
       data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),
         datasets:[
           {label:g.key+' '+t('utilRate'),data:data,borderColor:g.color,backgroundColor:g.color+'20',pointRadius:3,tension:0.3,fill:true,spanGaps:true},
