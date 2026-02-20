@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v7.2</title>
+<title>Production Performance v7.3</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v7.2</h1>
+<h1>📊 Production Performance v7.3</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -398,7 +398,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='7.2'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='7.3'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -1030,12 +1030,12 @@ function buildSummaryPage(){
   // Helper: get average stop time per equipment for a line on a date
   // e.g. K12=30min, K11=30min → avg = (30+30)/2 = 30min
   function getLineEqAvgStop(dt,line){
-    var rows=D.allRows.filter(function(r){return r.ds===dt&&r.line===line});
+    var rows=D.allRows.filter(function(r){return r.ds===dt&&r.line===line&&r.stop});
     if(!rows.length)return 0;
     var eqMap={};
     rows.forEach(function(r){
       if(!eqMap[r.eq])eqMap[r.eq]=0;
-      if(r.stop)eqMap[r.eq]+=r.time;
+      eqMap[r.eq]+=r.time;
     });
     var eqs=Object.keys(eqMap);
     if(!eqs.length)return 0;
@@ -1045,17 +1045,18 @@ function buildSummaryPage(){
   // Helper: average of daily equipment averages over multiple dates
   function getLineEqAvgStopMulti(dts,line){
     if(!dts.length)return 0;
-    var sum=dts.reduce(function(s,dt){return s+getLineEqAvgStop(dt,line)},0);
-    return sum/dts.length;
+    var vals=dts.map(function(dt){return getLineEqAvgStop(dt,line);}).filter(function(v){return v>0;});
+    if(!vals.length)return 0;
+    return vals.reduce(function(s,v){return s+v},0)/vals.length;
   }
   // Helper: get average stop time per equipment for ALL lines on a date
   function getAllEqAvgStop(dt){
-    var rows=D.allRows.filter(function(r){return r.ds===dt});
+    var rows=D.allRows.filter(function(r){return r.ds===dt&&r.stop});
     if(!rows.length)return 0;
     var eqMap={};
     rows.forEach(function(r){
       if(!eqMap[r.eq])eqMap[r.eq]=0;
-      if(r.stop)eqMap[r.eq]+=r.time;
+      eqMap[r.eq]+=r.time;
     });
     var eqs=Object.keys(eqMap);
     if(!eqs.length)return 0;
@@ -1065,8 +1066,9 @@ function buildSummaryPage(){
   // Helper: average of daily equipment averages for ALL lines over multiple dates
   function getAllEqAvgStopMulti(dts){
     if(!dts.length)return 0;
-    var sum=dts.reduce(function(s,dt){return s+getAllEqAvgStop(dt)},0);
-    return sum/dts.length;
+    var vals=dts.map(function(dt){return getAllEqAvgStop(dt);}).filter(function(v){return v>0;});
+    if(!vals.length)return 0;
+    return vals.reduce(function(s,v){return s+v},0)/vals.length;
   }
 
   function fmtCell(v,target){
