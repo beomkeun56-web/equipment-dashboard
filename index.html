@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>설비조정이력 분析 v3.4</title>
+<title>Production Performance v3.5</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',Arial,sans-serif;background:#000;color:#e2e8f0}
 .hd{background:linear-gradient(135deg,#0a0a0a,#1a1a1a);padding:16px 20px;border-bottom:2px solid #3b82f6}
-.hd h1{font-size:20px;color:#60a5fa}.hd .ver{font-size:11px;color:#94a3b8;font-weight:400;margin-left:6px}.hd p{font-size:12px;color:#94a3b8;margin-top:4px}
+.hd h1{font-size:16px;color:#60a5fa}.hd .ver{font-size:11px;color:#94a3b8;font-weight:400;margin-left:6px}.hd p{font-size:12px;color:#94a3b8;margin-top:4px}
 .file-bar{background:#000;padding:10px 20px;border-bottom:1px solid #1a1a1a;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.file-btn{background:#3b82f6;color:#fff;padding:10px 20px;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-height:44px;touch-action:manipulation}
+.file-btn{background:#3b82f6;color:#fff;padding:10px 20px;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-height:44px;touch-action:manipulation}
 .file-btn:active{background:#2563eb;transform:scale(0.97)}
 .file-name{font-size:12px;color:#94a3b8;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .file-status{font-size:11px;font-weight:600}
@@ -38,7 +38,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#000;color:#e2e8f0}
 .worst-tbl td{color:#cbd5e1}
 .worst-tbl tr:first-child td{color:#ef4444;font-weight:700}
 .tabs{display:flex;flex-wrap:wrap;gap:4px;padding:10px 16px;background:#0a0a0a;border-bottom:1px solid #1a1a1a;position:sticky;top:0;z-index:100}
-.tab{padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;background:#1a1a1a;color:#94a3b8;border:1px solid #2a2a2a;transition:all .2s;white-space:nowrap;touch-action:manipulation}
+.tab{padding:8px 16px;border-radius:6px;cursor:pointer;font-size:16px;font-weight:600;background:#1a1a1a;color:#94a3b8;border:1px solid #2a2a2a;transition:all .2s;white-space:nowrap;touch-action:manipulation}
 .tab.on{background:#3b82f6;color:#fff;border-color:#3b82f6}
 .tab:hover:not(.on){background:#2a2a2a;color:#e2e8f0}
 .pn{display:none;padding:16px}.pn.on{display:block}
@@ -84,7 +84,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd">
-<h1>📊 설비조정이력 분析 v3.4</h1>
+<h1>📊 Production Performance v3.5</h1>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
 <div class="file-bar">
@@ -112,7 +112,7 @@ PM调整 데이터를 자동 분석합니다</p>
 
 <script>
 let D=null, charts=[];
-var DATA_VERSION='3.4'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='3.5'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 function handleFile(input){
   var file=input.files[0]; if(!file)return;
