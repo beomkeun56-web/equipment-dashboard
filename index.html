@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>현황 v12.8</title>
+<title>현황 v12.9</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -91,7 +91,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 현황 v12.8</h1>
+<h1>📊 현황 v12.9</h1>
 <div style="position:absolute;top:12px;right:20px;display:flex;gap:4px;align-items:center">
 <label class="file-btn" for="fileInput" id="fileBtnLabel" style="min-width:56px">파일선택</label>
 <button id="clearBtn" class="hd-btn" style="display:none" onclick="clearData()">초기화</button>
@@ -437,7 +437,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='12.8'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='12.9'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -922,7 +922,7 @@ function processWorkbook(wb){
   };
 }
 
-function go(i){document.querySelectorAll('.pn').forEach(function(p,x){p.classList.toggle('on',x===i)});document.querySelectorAll('.tab').forEach(function(t,x){t.classList.toggle('on',x===i)})}
+function go(i){document.querySelectorAll('.pn').forEach(function(p,x){p.classList.toggle('on',x===i)});document.querySelectorAll('.tab').forEach(function(t,x){t.classList.toggle('on',x===i)});setTimeout(function(){var pn=document.querySelectorAll('.pn')[i];if(pn)pn.querySelectorAll('.hc').forEach(function(el){el.scrollLeft=el.scrollWidth;});},50);}
 
 // === 히트맵 팔레트 시스템 ===
 var _warmPal=[
@@ -1655,7 +1655,7 @@ function buildOverviewPage(){
   h+='<div class="bx" style="cursor:pointer" onclick="go(2)"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('utilTitle')+' <em style="color:#94a3b8;font-size:10px">▶ '+t('tabUtil')+'</em>';
   h+='<span style="margin-left:auto;display:flex;gap:6px;font-size:9px;font-weight:400">';
   h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:3px;background:#f87171"></span>'+t('utilRate')+'</span>';
-  h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #f59e0b"></span>'+t('utilTarget')+'90%</span>';
+  h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #f59e0b"></span>'+t('utilTarget')+'95%</span>';
   h+='</span></h3>';
   h+='<canvas id="ovUtilChart"></canvas></div>';
 
@@ -1819,7 +1819,7 @@ function initOverviewLossChart(){
   var datasets=lines.map(function(ln){return{label:ln,data:dates.map(function(dt){var v=D.lossByLineDate[dt]&&D.lossByLineDate[dt][ln];return v&&v.r>0?Math.round(v.r*10000)/100:null;}),borderColor:LOSS_LINE_COLORS[ln],backgroundColor:'transparent',pointRadius:2,tension:0.3,spanGaps:true,borderWidth:1.5};});
   datasets.push({label:'Total',data:dates.map(function(dt){var tp=0,tl=0;lines.forEach(function(l){var dd=D.lossByLineDate[dt]&&D.lossByLineDate[dt][l];if(dd){tp+=dd.p;tl+=dd.p*dd.r;}});return tp>0?Math.round(tl/tp*10000)/100:null;}),borderColor:LOSS_LINE_COLORS.Total,backgroundColor:'transparent',pointRadius:2,tension:0.3,spanGaps:true,borderWidth:2});
   datasets.push({label:t('target')+'(6%)',data:dates.map(function(){return 6;}),borderColor:'#f59e0b',borderDash:[5,5],pointRadius:0,tension:0});
-  var _lossLbl={id:'ovLossLbl',afterDatasetsDraw:function(chart){var ctx=chart.ctx;ctx.save();ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';var numDs=chart.data.datasets.length-1;for(var i=0;i<chart.data.labels.length;i++){var mx=-1,mxDs=-1;for(var d=0;d<numDs;d++){var v=chart.data.datasets[d].data[i];if(v!=null&&v>mx){mx=v;mxDs=d;}}if(mxDs>=0&&mx>0){var pt=chart.getDatasetMeta(mxDs).data[i];ctx.fillStyle=chart.data.datasets[mxDs].borderColor;ctx.fillText(mx.toFixed(1)+'%',pt.x,pt.y-4);}}ctx.restore();}};
+  var _lossLbl={id:'ovLossLbl',afterDatasetsDraw:function(chart){var ctx=chart.ctx;ctx.save();ctx.font='9px sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';var numDs=chart.data.datasets.length-1;for(var i=0;i<chart.data.labels.length;i++){var mx=-1,mxDs=-1;for(var d=0;d<numDs;d++){var v=chart.data.datasets[d].data[i];if(v!=null&&v>mx){mx=v;mxDs=d;}}if(mxDs>=0&&mx>0){var pt=chart.getDatasetMeta(mxDs).data[i];ctx.fillStyle=chart.data.datasets[mxDs].borderColor;ctx.fillText(Math.round(mx)+'%',pt.x,pt.y-4);}}ctx.restore();}};
   var ch=new Chart(canvas,{type:'line',plugins:[_lossLbl],data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),datasets:datasets},
     options:{responsive:true,maintainAspectRatio:true,aspectRatio:2.5,plugins:{legend:{display:false}},
       scales:{x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'#1f2937'}},y:{ticks:{color:'#94a3b8',font:{size:9},callback:function(v){return v+'%'}},grid:{color:'#1f2937'},min:0}}}});
@@ -1830,9 +1830,9 @@ function initOverviewUtilChart(){
   if(!canvas||!D||!D.lossDates||!D.lossDates.length)return;
   var dates=D.lossDates;
   var data=dates.map(function(dt){var dd=D.lossByLineDate[dt]&&D.lossByLineDate[dt].Total;if(!dd||!dd.u||dd.u<=0)return null;return dd.u>1?Math.round(dd.u*100)/100:Math.round(dd.u*10000)/100;});
-  var _lp={id:'ovUtilLbl',afterDatasetsDraw:function(chart){var ds=chart.data.datasets[0];if(!ds)return;var meta=chart.getDatasetMeta(0);var ctx=chart.ctx;ctx.save();ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';meta.data.forEach(function(pt,i){var v=ds.data[i];if(v==null)return;ctx.fillStyle='#f87171';ctx.fillText(Math.round(v)+'%',pt.x,pt.y-5);});ctx.restore();}};
+  var _lp={id:'ovUtilLbl',afterDatasetsDraw:function(chart){var ds=chart.data.datasets[0];if(!ds)return;var meta=chart.getDatasetMeta(0);var ctx=chart.ctx;ctx.save();ctx.font='9px sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';meta.data.forEach(function(pt,i){var v=ds.data[i];if(v==null)return;ctx.fillStyle='#f87171';ctx.fillText(Math.round(v)+'%',pt.x,pt.y-5);});ctx.restore();}};
   var ch=new Chart(canvas,{type:'line',plugins:[_lp],data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),
-    datasets:[{label:'Total '+t('utilRate'),data:data,borderColor:'#f87171',backgroundColor:'#f8717120',pointRadius:3,tension:0.3,fill:true,spanGaps:true},{label:t('utilTarget')+'(90%)',data:dates.map(function(){return 90;}),borderColor:'#f59e0b',borderDash:[5,5],pointRadius:0,tension:0}]},
+    datasets:[{label:'Total '+t('utilRate'),data:data,borderColor:'#f87171',backgroundColor:'#f8717120',pointRadius:2,borderWidth:1.5,tension:0.3,fill:true,spanGaps:true},{label:t('utilTarget')+'(95%)',data:dates.map(function(){return 95;}),borderColor:'#f59e0b',borderDash:[5,5],pointRadius:0,tension:0,borderWidth:1}]},
     options:{responsive:true,maintainAspectRatio:true,aspectRatio:2.5,plugins:{legend:{display:false}},
       scales:{x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'#1f2937'}},y:{ticks:{color:'#94a3b8',font:{size:9},callback:function(v){return v+'%'}},grid:{color:'#1f2937'},min:50,max:110}}}});
   charts.push(ch);
@@ -1843,7 +1843,8 @@ function initOverviewInspChart(){
   var dates=D.lossDates;
   var cfgs=[{ln:'K1',key:'cd',label:'K1 '+t('fullDef'),color:'#3b82f6'},{ln:'K2',key:'cd',label:'K2 '+t('fullDef'),color:'#8b5cf6'},{ln:'G',key:'cd',label:'G '+t('fullDef'),color:'#06b6d4'},{ln:'H',key:'dd',label:'H '+t('dimDef'),color:'#22c55e'}];
   var datasets=cfgs.map(function(cfg){return{label:cfg.label,data:dates.map(function(dt){var d=D.lossByLineDate[dt]&&D.lossByLineDate[dt][cfg.ln];if(!d||!d.p||d.p<=0)return null;var v=d[cfg.key];return v>0?Math.round(v/d.p*10000)/100:null;}),borderColor:cfg.color,backgroundColor:'transparent',pointRadius:2,tension:0.3,spanGaps:true,borderWidth:1.5};});
-  var ch=new Chart(canvas,{type:'line',data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),datasets:datasets},
+  var _inspLbl={id:'ovInspLbl',afterDatasetsDraw:function(chart){var ctx=chart.ctx;ctx.save();ctx.font='9px sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';var numDs=chart.data.datasets.length;for(var i=0;i<chart.data.labels.length;i++){var mx=-1,mxDs=-1;for(var d=0;d<numDs;d++){var v=chart.data.datasets[d].data[i];if(v!=null&&v>mx){mx=v;mxDs=d;}}if(mxDs>=0&&mx>0){var pt=chart.getDatasetMeta(mxDs).data[i];ctx.fillStyle=chart.data.datasets[mxDs].borderColor;ctx.fillText(Math.round(mx)+'%',pt.x,pt.y-4);}}ctx.restore();}};
+  var ch=new Chart(canvas,{type:'line',plugins:[_inspLbl],data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),datasets:datasets},
     options:{responsive:true,maintainAspectRatio:true,aspectRatio:2.5,plugins:{legend:{display:false}},
       scales:{x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'#1f2937'}},y:{ticks:{color:'#94a3b8',font:{size:9},callback:function(v){return v+'%'}},grid:{color:'#1f2937'},min:0}}}});
   charts.push(ch);
@@ -1858,15 +1859,15 @@ function initOverviewDailyChart(){
   var _dailyLbl={id:'ovDailyLbl',afterDatasetsDraw:function(chart){var ctx=chart.ctx;ctx.save();
     // 막대(정지시간) 바 안쪽 하단(일자 위) 흰색
     var barDs=chart.data.datasets[0];var barMeta=chart.getDatasetMeta(0);
-    ctx.font='bold 8px sans-serif';ctx.textAlign='center';ctx.fillStyle='#fff';
-    barMeta.data.forEach(function(bar,i){var v=barDs.data[i];if(v>0){ctx.textBaseline='bottom';ctx.fillText(v,bar.x,bar.base-2);}});
+    ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillStyle='#fff';
+    barMeta.data.forEach(function(bar,i){var v=barDs.data[i];if(v>0){ctx.textBaseline='bottom';ctx.fillText(v+t('min'),bar.x,bar.base-2);}});
     // 꺾은선(불량수량) 위 빨간색 k단위
     if(chart.data.datasets.length>1){var lineDs2=chart.data.datasets[1];var lineMeta2=chart.getDatasetMeta(1);ctx.fillStyle='#ef4444';ctx.textBaseline='bottom';
-    lineMeta2.data.forEach(function(pt,i){var v=lineDs2.data[i];if(v!=null&&v>0){var txt=v>=1000?(v/1000).toFixed(1)+'k':v.toString();ctx.fillText(txt,pt.x,pt.y-4);}});}
+    lineMeta2.data.forEach(function(pt,i){var v=lineDs2.data[i];if(v!=null&&v>0){var txt=v>=1000?Math.round(v/1000)+'k':v.toString();ctx.fillText(txt,pt.x,pt.y-4);}});}
     ctx.restore();}};
   var ch=new Chart(canvas,{type:'bar',plugins:[_dailyLbl],data:{labels:labels,datasets:[
     {label:t('dailyTimeMin'),data:barData,backgroundColor:'#3b82f6B3',borderRadius:4,yAxisID:'y',order:2},
-    {label:t('defect'),data:lineData,type:'line',borderColor:'#ef4444',borderWidth:2,pointRadius:3,pointBackgroundColor:'#ef4444',yAxisID:'y1',tension:.3,order:1}
+    {label:t('defect'),data:lineData,type:'line',borderColor:'#ef4444',borderWidth:1.5,pointRadius:2,pointBackgroundColor:'#ef4444',yAxisID:'y1',tension:.3,order:1}
   ]},options:{responsive:true,maintainAspectRatio:true,aspectRatio:2.5,plugins:{legend:{display:false},tooltip:{backgroundColor:'#0a0a0a',bodyColor:'#e2e8f0'}},scales:{
     x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'#1a1a1a'}},
     y:{position:'left',ticks:{color:'#3b82f6',font:{size:8}},grid:{color:'#1a1a1a'},beginAtZero:true},
@@ -1880,16 +1881,14 @@ function buildLossPage(){
   if(!D)return'<div style="padding:20px;color:#94a3b8">'+t('noData')+'</div>';
   var h='';
   // 일간 Loss 현황 히트맵 테이블
-  h+='<div class="bx"><h3>'+t('lossTitle')+'</h3>';
-  h+=buildHmLegend('loss');
+  h+='<div class="bx"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('lossTitle');
+  h+='<span style="margin-left:auto;display:flex;gap:6px;align-items:center">'+buildHmSettings('loss')+'</span></h3>';
+  h+='<div class="hc">';
   _buildLossDailyTableOnly=true;h+=buildLossDaily();_buildLossDailyTableOnly=false;
-  h+='</div>';
+  h+='</div></div>';
   // 상세 Loss 현황
-  h+='<div class="bx"><h3>📉 '+t('lossDetail')+'</h3>';
-  h+='<div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap">';
-  h+='<span style="margin-left:auto;display:flex;gap:6px;align-items:center">'+buildHmSettings('loss')+'</span>';
-  h+='</div>';
-  h+=buildHmLegend('loss');
+  h+='<div class="bx"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('lossDetail');
+  h+='<span style="margin-left:auto;display:flex;gap:6px;align-items:center">'+buildHmSettings('loss')+'</span></h3>';
   h+=buildLossDetail();
   h+='</div>';
   return h;
