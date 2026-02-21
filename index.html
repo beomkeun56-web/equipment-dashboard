@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Production Performance v10.5</title>
+<title>Production Performance v10.6</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v10.5</h1>
+<h1>📊 Production Performance v10.6</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -416,7 +416,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='10.5'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='10.6'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -2020,15 +2020,7 @@ function buildInspPage(){
   h+='<span style="margin-left:auto"><label style="color:#94a3b8;font-size:11px">'+t('kpiDateLabel')+'</label><select onchange="renderInspWithDate(this.value)" style="'+selS+'">';
   dates.slice().reverse().forEach(function(d){h+='<option value="'+d+'"'+(d===lastDate?' selected':'')+'>'+d+'</option>';});
   h+='</select></span></h3>';
-  h+='<canvas id="inspDefChart"></canvas>';
-  // 임시 디버그: 첫번째 날짜 raw값 표시
-  var _dbgDt=dates[0];var _dbgLd=D.lossByLineDate[_dbgDt]||{};
-  h+='<div style="margin-top:8px;padding:8px;background:#1a1a1a;border-radius:6px;font-size:11px;color:#94a3b8">';
-  h+='<b>[DEBUG] '+_dbgDt+'</b><br>';
-  ['K1','K2','G','H','E','Total'].forEach(function(ln){
-    var d=_dbgLd[ln];if(d)h+=ln+': cd(V)='+d.cd+' dd(Z)='+d.dd+' | ';
-  });
-  h+='</div></div>';
+  h+='<canvas id="inspDefChart"></canvas></div>';
 
   // === Section 2: 검사기 조정 현황 KPI ===
   var inspRows=(D.allRows||[]).filter(function(r){return r.sub==='检查机';});
@@ -2069,8 +2061,8 @@ function buildInspPage(){
   var inspDefList=[];
   weekDates.forEach(function(dt){
     var ld=D.lossByLineDate[dt];if(!ld)return;
-    ['K1','K2','G'].forEach(function(ln){if(ld[ln]&&ld[ln].cd>0)inspDefList.push({line:ln,date:dt,val:ld[ln].cd,type:t('fullDef')});});
-    if(ld['H']&&ld['H'].dd>0)inspDefList.push({line:'H',date:dt,val:ld['H'].dd,type:t('dimDef')});
+    ['K1','K2','G'].forEach(function(ln){if(ld[ln]&&ld[ln].cd>0&&ld[ln].p>0)inspDefList.push({line:ln,date:dt,val:Math.round(ld[ln].cd/ld[ln].p*10000)/100,type:t('fullDef')});});
+    if(ld['H']&&ld['H'].dd>0&&ld['H'].p>0)inspDefList.push({line:'H',date:dt,val:Math.round(ld['H'].dd/ld['H'].p*10000)/100,type:t('dimDef')});
   });
   inspDefList.sort(function(a,b){return b.val-a.val});
   h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">';
@@ -2127,11 +2119,10 @@ function initInspChart(){
   var datasets=inspLines.map(function(cfg){
     return{label:cfg.label,data:dates.map(function(dt){
       var d=D.lossByLineDate[dt]&&D.lossByLineDate[dt][cfg.ln];
-      if(!d)return null;var v=d[cfg.key];
-      return v>0?Math.round(v*100)/100:null;
+      if(!d||!d.p||d.p<=0)return null;var v=d[cfg.key];
+      return v>0?Math.round(v/d.p*10000)/100:null;
     }),borderColor:cfg.color,backgroundColor:'transparent',pointRadius:3,pointBackgroundColor:cfg.color,tension:0.3,spanGaps:true,borderWidth:2};
   });
-  console.log('[검사기] 첫날짜 데이터:', JSON.stringify(D.lossByLineDate[dates[0]]));
   var ch=new Chart(canvas,{type:'line',
     data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),datasets:datasets},
     options:{responsive:true,maintainAspectRatio:true,aspectRatio:2,
