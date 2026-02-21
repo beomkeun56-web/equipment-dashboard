@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Production Performance v9.1</title>
+<title>Production Performance v9.2</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v9.1</h1>
+<h1>📊 Production Performance v9.2</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -1494,6 +1494,29 @@ function buildLossDaily(){
   if(!dates.length){var dbg=D._lossDbg||{};return'<div style="color:#94a3b8;padding:16px;font-size:12px">⚠ '+t('lossNoData')+'<br>'+t('stMatched')+dbg.found+'<br>'+t('stAllSheets')+((dbg.sheets||[]).join(', '))+'<br>rows:'+dbg.rows+'<br>sample:'+dbg.sample+'</div>';}
   var lines=['K1','K2','G','H','E'];
   var all=lines.concat(['Total']);
+  var lossCfg=_hmCfg.loss||{pal:'green_red',axis:'all'};
+  // 1) 모든 값 미리 계산
+  var vals={},accumVals={},allMx=0;
+  all.forEach(function(ln){
+    var isT=ln==='Total';
+    var accum;
+    if(isT){var tp=0,tl=0;lines.forEach(function(l){var a=D.lossAccumByLine[l]||{prod:0,loss:0};tp+=a.prod;tl+=a.loss;});accum=tp>0?tl/tp:0;}
+    else{var a2=D.lossAccumByLine[ln]||{prod:0,loss:0};accum=a2.prod>0?a2.loss/a2.prod:0;}
+    accumVals[ln]=accum;if(accum>allMx)allMx=accum;
+    vals[ln]={};
+    dates.forEach(function(dt){
+      var v;
+      if(isT){var tp2=0,tl2=0;lines.forEach(function(l){var dd=D.lossByLineDate[dt]&&D.lossByLineDate[dt][l];if(dd){tp2+=dd.p;tl2+=dd.p*dd.r;}});v=tp2>0?tl2/tp2:0;}
+      else{var dd2=D.lossByLineDate[dt]&&D.lossByLineDate[dt][ln];v=dd2?dd2.r:0;}
+      vals[ln][dt]=v;if(v>allMx)allMx=v;
+    });
+  });
+  // 2) 기준별 max
+  var rowMx={},colMx={};
+  if(lossCfg.axis==='row'){all.forEach(function(ln){var rm=accumVals[ln];dates.forEach(function(dt){if(vals[ln][dt]>rm)rm=vals[ln][dt]});rowMx[ln]=rm||0.01})}
+  if(lossCfg.axis==='col'){colMx['_accum']=0;all.forEach(function(ln){if(accumVals[ln]>colMx['_accum'])colMx['_accum']=accumVals[ln]});dates.forEach(function(dt){var cm=0;all.forEach(function(ln){if(vals[ln][dt]>cm)cm=vals[ln][dt]});colMx[dt]=cm||0.01});if(!colMx['_accum'])colMx['_accum']=0.01}
+  function getLossMx(ln,dt){if(lossCfg.axis==='row')return rowMx[ln]||0.01;if(lossCfg.axis==='col')return colMx[dt]||0.01;return allMx||0.01}
+  // 3) 렌더링
   var thS='background:#1e3a5f;color:#94a3b8;padding:5px 8px;font-size:11px;border:1px solid #2a2a2a;white-space:nowrap;text-align:center';
   var tdS='padding:4px 8px;font-size:11px;border:1px solid #2a2a2a;text-align:center;white-space:nowrap';
   var stickyA='position:sticky;left:0;z-index:1;';
@@ -1510,25 +1533,11 @@ function buildLossDaily(){
     var rowBg=isT?'background:#1c2a3a;':'';
     h+='<tr style="'+rowBg+'">';
     h+='<td style="'+tdS+';'+stickyA+'background:'+(isT?'#1c2a3a':'#0a0a0a')+';color:'+lc+';font-weight:700;min-width:52px">'+ln+'</td>';
-    // 누적
-    var accum;
-    if(isT){
-      var tp=0,tl=0;lines.forEach(function(l){var a=D.lossAccumByLine[l]||{prod:0,loss:0};tp+=a.prod;tl+=a.loss;});
-      accum=tp>0?tl/tp:0;
-    } else {
-      var a2=D.lossAccumByLine[ln]||{prod:0,loss:0};
-      accum=a2.prod>0?a2.loss/a2.prod:0;
-    }
-    h+='<td style="'+tdS+';'+lossClr(accum)+';font-weight:700;min-width:70px">'+fmtLoss(accum)+'</td>';
+    var accum=accumVals[ln];
+    h+='<td style="'+tdS+';'+getHmStyle(accum,getLossMx(ln,'_accum'),'loss')+';font-weight:700;min-width:70px">'+fmtLoss(accum)+'</td>';
     dates.forEach(function(dt){
-      var v;
-      if(isT){
-        var tp2=0,tl2=0;lines.forEach(function(l){var dd=D.lossByLineDate[dt]&&D.lossByLineDate[dt][l];if(dd){tp2+=dd.p;tl2+=dd.p*dd.r;}});
-        v=tp2>0?tl2/tp2:0;
-      } else {
-        var dd2=D.lossByLineDate[dt]&&D.lossByLineDate[dt][ln];v=dd2?dd2.r:0;
-      }
-      h+='<td style="'+tdS+';'+lossClr(v)+'">'+fmtLoss(v)+'</td>';
+      var v=vals[ln][dt];
+      h+='<td style="'+tdS+';'+getHmStyle(v,getLossMx(ln,dt),'loss')+'">'+fmtLoss(v)+'</td>';
     });
     h+='</tr>';
   });
@@ -1567,45 +1576,48 @@ function buildLossDetail(){
   _hdr.forEach(function(c){h+='<th style="'+thS+'">'+c+'</th>';});
   h+='</tr></thead><tbody>';
   var totProd=0,totCapa=0,totLarr=new Array(_nCols).fill(0);
-  // 컬럼별 max값 계산 (세로 색조용)
+  var dtlCfg=_hmCfg.loss||{pal:'green_red',axis:'all'};
+  // 1) 모든 셀 값 미리 계산
+  var eqVals={},allDtlMx=0;
   var colMaxLoss=0,colMaxArr=new Array(_nCols).fill(0);
   eqList.forEach(function(eq){
     var d=dateData[eq],prod=d.prod||0;
-    var stA=getSTActual(eq)||(d.st>0?d.st:0);
-    var capa=stA>0?Math.round(86400/stA):0;
-    // Loss율 = 13개 항목 합계 (엑셀 공식과 일치)
     var lossSum=0;d.larr.forEach(function(v){lossSum+=v;});
     var lossR=prod>0?lossSum/prod:0;
-    if(lossR>colMaxLoss)colMaxLoss=lossR;
-    d.larr.forEach(function(v,i){var pct=prod>0&&v>0?v/prod:0;if(pct>colMaxArr[i])colMaxArr[i]=pct;});
+    if(lossR>colMaxLoss)colMaxLoss=lossR;if(lossR>allDtlMx)allDtlMx=lossR;
+    var pcts=d.larr.map(function(v,i){var p=prod>0&&v>0?v/prod:0;if(p>colMaxArr[i])colMaxArr[i]=p;if(p>allDtlMx)allDtlMx=p;return p;});
+    eqVals[eq]={lossR:lossR,pcts:pcts};
   });
+  // 2) 기준별 max (행=설비, 열=Loss항목)
+  var dtlRowMx={},dtlColMx={};
+  if(dtlCfg.axis==='row'){eqList.forEach(function(eq){var rm=eqVals[eq].lossR;eqVals[eq].pcts.forEach(function(p){if(p>rm)rm=p});dtlRowMx[eq]=rm||0.001})}
+  if(dtlCfg.axis==='col'){dtlColMx['_loss']=colMaxLoss||0.001;for(var ci=0;ci<_nCols;ci++)dtlColMx[ci]=colMaxArr[ci]||0.001}
+  function getDtlMx(eq,colIdx){if(dtlCfg.axis==='row')return dtlRowMx[eq]||0.001;if(dtlCfg.axis==='col')return dtlColMx[colIdx]||0.001;return allDtlMx||0.001}
+  // 3) 렌더링
   eqList.forEach(function(eq){
     var d=dateData[eq];
     var prod=d.prod||0;
     var stA=getSTActual(eq)||(d.st>0?d.st:0);
     var capa=stA>0?Math.round(86400/stA):0;
     var util=capa>0?prod/capa:0;
-    var lossSum=0;d.larr.forEach(function(v){lossSum+=v;});
-    var lossR=prod>0?lossSum/prod:0;
+    var ev=eqVals[eq];
     totProd+=prod;totCapa+=capa;
     h+='<tr><td style="'+tdS+';'+stkL+'background:#0a0a0a;color:#93c5fd;font-weight:700;min-width:56px">'+eq+'</td>';
     h+='<td style="'+tdS+'">'+capa.toLocaleString()+'</td>';
     h+='<td style="'+tdS+'">'+Math.round(prod).toLocaleString()+'</td>';
     h+='<td style="'+tdS+';color:'+(util>=0.9?'#22c55e':util>=0.7?'#f59e0b':'#ef4444')+'">'+( util>0?(util*100).toFixed(1)+'%':'-')+'</td>';
-    var lrRatio=colMaxLoss>0?lossR/colMaxLoss:0;
-    h+='<td style="'+tdS+';'+detailClr(lrRatio)+'">'+fmtLoss(lossR)+'</td>';
+    h+='<td style="'+tdS+';'+getHmStyle(ev.lossR,getDtlMx(eq,'_loss'),'loss')+'">'+fmtLoss(ev.lossR)+'</td>';
     d.larr.forEach(function(v,i){
       totLarr[i]+=v;
-      var pct=prod>0&&v>0?v/prod:0;
-      var ratio=colMaxArr[i]>0?pct/colMaxArr[i]:0;
+      var pct=ev.pcts[i];
       var cellTxt;
       if(i===9&&v>0&&prod===0){cellTxt=Math.round(v).toLocaleString();}
       else{cellTxt=pct>0?(pct*100).toFixed(2)+'%':'-';}
-      // 기술조정(idx9): 값이 있으면 클릭 팝업
+      var sty=getHmStyle(pct,getDtlMx(eq,i),'loss');
       if(i===9&&v>0&&d.techNotes&&d.techNotes.length>0){
-        h+='<td style="'+tdS+';'+detailClr(ratio)+';cursor:pointer;text-decoration:underline" onclick="showTechPopup(\''+_lossDate+'\',\''+eq+'\')">'+ cellTxt+'</td>';
+        h+='<td style="'+tdS+';'+sty+';cursor:pointer;text-decoration:underline" onclick="showTechPopup(\''+_lossDate+'\',\''+eq+'\')">'+ cellTxt+'</td>';
       } else {
-        h+='<td style="'+tdS+';'+detailClr(ratio)+'">'+cellTxt+'</td>';
+        h+='<td style="'+tdS+';'+sty+'">'+cellTxt+'</td>';
       }
     });
     h+='</tr>';
@@ -1619,14 +1631,13 @@ function buildLossDetail(){
   h+='<td style="'+tdS+'">'+totCapa.toLocaleString()+'</td>';
   h+='<td style="'+tdS+'">'+Math.round(totProd).toLocaleString()+'</td>';
   h+='<td style="'+tdS+';color:'+(totUtil>=0.9?'#22c55e':totUtil>=0.7?'#f59e0b':'#ef4444')+'">'+( totUtil>0?(totUtil*100).toFixed(1)+'%':'-')+'</td>';
-  h+='<td style="'+tdS+';'+detailClr(colMaxLoss>0?totLoss/colMaxLoss:0)+'">'+fmtLoss(totLoss)+'</td>';
+  h+='<td style="'+tdS+';'+getHmStyle(totLoss,getDtlMx('_total','_loss'),'loss')+'">'+fmtLoss(totLoss)+'</td>';
   totLarr.forEach(function(v,i){
     var pct=totProd>0&&v>0?v/totProd:0;
-    var ratio=colMaxArr[i]>0?pct/colMaxArr[i]:0;
     var cellTxt;
     if(i===9&&v>0&&totProd===0){cellTxt=Math.round(v).toLocaleString();}
     else{cellTxt=pct>0?(pct*100).toFixed(2)+'%':'-';}
-    h+='<td style="'+tdS+';'+detailClr(ratio)+'">'+cellTxt+'</td>';
+    h+='<td style="'+tdS+';'+getHmStyle(pct,getDtlMx('_total',i),'loss')+'">'+cellTxt+'</td>';
   });
   h+='</tr>';
   h+='</tbody></table></div>';
