@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>현황 v12.6</title>
+<title>현황 v12.7</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -90,7 +90,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 현황 v12.6</h1>
+<h1>📊 현황 v12.7</h1>
 <div style="position:absolute;top:12px;right:20px;display:flex;gap:4px;align-items:center">
 <label class="file-btn" for="fileInput" id="fileBtnLabel" style="min-width:56px">파일선택</label>
 <button id="clearBtn" class="hd-btn" style="display:none" onclick="clearData()">초기화</button>
@@ -154,7 +154,7 @@ tabDaily:'정지시간',
 tabDefHm:'불량맵',
 tabStopHm:'정지맵',
 tabST:'환산검토',
-lossTitle:'LOSS 요약',
+lossTitle:'일간 Loss 현황',
 lossDaily:'일간 Loss 현황',
 lossDetail:'상세 Loss 현황',
 accum:'누적',
@@ -169,12 +169,14 @@ prod:'생산실적',
 plan:'계획(Capa)',
 utilRate:'가동율',
 lossRate:'Loss율',
-kpiTitle:'라인별 정지시간 KPI 현황',
+chart:'그래프',
+ovLossChart:'일간 Loss 그래프',
+kpiTitle:'설비 정지 시간 현황',
 kpiTarget:'목표: ',
 yesterday:'전일',
 weekly:'주간',
 monthly:'월간',
-top3Title:'문제설비 TOP 3',
+top3Title:'정지 Worst 3',
 top3Hdr:['#','설비','정지시간(주간)','정지건수','불량수량(주간)','주요 조정항목'],
 noEquip:'해당 설비 없음',
 worst5Title:'Worst 5',
@@ -245,7 +247,7 @@ min:'분',
 avgDay:'일평균',
 pmOnly:'PM调整 Only | 停机/开机 제외 | >1000분 제외 | 설비 ',
 eqUnit:'대',
-utilTitle:'가동율 현황',
+utilTitle:'가동율현황',
 utilTarget:'목표',
 kpiDateLabel:'기준일',
 hmAvg:'평균',
@@ -254,6 +256,7 @@ hmStopTitle:'설비 일자별 조정시간(분)',
 lineDaily:' Line 일자별 정지시간 / 불량수량',
 lineStopVs:' Line 정지 vs 비정지',
 allDaily:'전체 일자별 정지시간 / 불량수량',
+ovDailyTitle:'일간 정지, 불량 수량 현황',
 allStopVs:'전체 정지 vs 비정지',
 tabInsp:'검사기',
 inspDefChart:'완전+치수 불량 현황',
@@ -263,6 +266,8 @@ fullDef:'완전불량',
 dimDef:'치수불량',
 prevDay:'전일',
 inspDefW:'불량수량',
+ovInspTblTitle:'완전+치수 현황',
+ovInspWorstTitle:'검사기 불량,정지 Worst 5',
 inspTimeW:'정지시간'
 },
 zh:{
@@ -297,7 +302,7 @@ tabDaily:'停机时间',
 tabDefHm:'不良图',
 tabStopHm:'停机图',
 tabST:'换算检讨',
-lossTitle:'LOSS 汇总',
+lossTitle:'日间 Loss 现况',
 lossDaily:'日间 Loss 现况',
 lossDetail:'详细 Loss 现况',
 accum:'累计',
@@ -312,12 +317,14 @@ prod:'生产业绩',
 plan:'计划(Capa)',
 utilRate:'稼动率',
 lossRate:'Loss率',
-kpiTitle:'产线停机时间 KPI 现况',
+chart:'图表',
+ovLossChart:'日间 Loss 图表',
+kpiTitle:'设备停机时间现况',
 kpiTarget:'目标: ',
 yesterday:'前日',
 weekly:'周间',
 monthly:'月间',
-top3Title:'问题设备 TOP 3',
+top3Title:'停机 Worst 3',
 top3Hdr:['#','设备','停机时间(周间)','停机次数','不良数量(周间)','主要调整项目'],
 noEquip:'无相关设备',
 worst5Title:'Worst 5',
@@ -388,7 +395,7 @@ min:'分',
 avgDay:'日均',
 pmOnly:'PM调整 Only | 停机/开机 除外 | >1000分 除外 | 设备 ',
 eqUnit:'台',
-utilTitle:'稼动率 现况',
+utilTitle:'稼动率现况',
 utilTarget:'目标',
 kpiDateLabel:'基准日',
 hmAvg:'平均',
@@ -397,6 +404,7 @@ hmStopTitle:'设备日别调整时间(分)',
 lineDaily:' Line 日别停机时间 / 不良数量',
 lineStopVs:' Line 停机 vs 非停机',
 allDaily:'全体日别停机时间 / 不良数量',
+ovDailyTitle:'日间停机, 不良数量现况',
 allStopVs:'全体停机 vs 非停机',
 tabInsp:'检查机',
 inspDefChart:'完全+尺寸 不良 现况',
@@ -406,6 +414,8 @@ fullDef:'完全不良',
 dimDef:'尺寸不良',
 prevDay:'前日',
 inspDefW:'不良数量',
+ovInspTblTitle:'完全+尺寸 现况',
+ovInspWorstTitle:'检查机 不良,停机 Worst 5',
 inspTimeW:'停机时间'
 }
 };
@@ -424,7 +434,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='12.6'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='12.7'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -1549,14 +1559,82 @@ function buildOverviewPage(){
   var dates=D.lossDates||[];
   var allDates=D.all_dates||[];
 
-  // --- 1) Loss 요약 히트맵 테이블 (클릭→Loss탭) ---
+  // --- 0) 당일 전체 요약 ---
+  if(dates.length>0){
+    var _ovLast=dates[dates.length-1];
+    var _ovLS=D.lineSummary||{};
+    var _ovLns=['G','H','K'];
+    // 가동설비
+    var _ovEqT=0;_ovLns.forEach(function(ln){_ovEqT+=(_ovLS[ln]||{}).eq||0;});
+    // Loss율: K=K1+K2 가중평균
+    function _ovLoss(ln){
+      if(ln==='K'){var k1=D.lossByLineDate[_ovLast]&&D.lossByLineDate[_ovLast]['K1'];var k2=D.lossByLineDate[_ovLast]&&D.lossByLineDate[_ovLast]['K2'];var tp=(k1?k1.p:0)+(k2?k2.p:0);var tl=(k1?k1.p*k1.r:0)+(k2?k2.p*k2.r:0);return tp>0?tl/tp*100:0;}
+      var dd=D.lossByLineDate[_ovLast]&&D.lossByLineDate[_ovLast][ln];return dd&&dd.p>0?dd.r*100:0;
+    }
+    var _ovLossT=0,_ovLossTP=0;['K1','K2','G','H','E'].forEach(function(l){var dd=D.lossByLineDate[_ovLast]&&D.lossByLineDate[_ovLast][l];if(dd){_ovLossTP+=dd.p;_ovLossT+=dd.p*dd.r;}});
+    var _ovLossTot=_ovLossTP>0?_ovLossT/_ovLossTP*100:0;
+    // 조정Loss (PM조정=larr[0])
+    function _ovPmLoss(line){var dd=D.lossDetailByDateEq[_ovLast]||{};var pm=0,pr=0;Object.keys(dd).forEach(function(eq){if(!line||eq[0]===line){pm+=dd[eq].larr[0];}});
+      if(line==='K'){var k1=D.lossByLineDate[_ovLast]&&D.lossByLineDate[_ovLast]['K1'];var k2=D.lossByLineDate[_ovLast]&&D.lossByLineDate[_ovLast]['K2'];pr=(k1?k1.p:0)+(k2?k2.p:0);}
+      else if(!line){['K1','K2','G','H','E'].forEach(function(l){var v=D.lossByLineDate[_ovLast]&&D.lossByLineDate[_ovLast][l];if(v)pr+=v.p;});}
+      else{var v=D.lossByLineDate[_ovLast]&&D.lossByLineDate[_ovLast][line];pr=v?v.p:0;}
+      return pr>0?pm/pr*100:0;}
+    // 조정정지 (KPI 평균)
+    var _ovDsToFull={};(D.allRows||[]).forEach(function(r){if(r.ds&&r.dateStr&&!_ovDsToFull[r.ds])_ovDsToFull[r.ds]=r.dateStr;});
+    Object.keys(D.kpiStopByDateEq||{}).forEach(function(fd){var p=fd.split('-');if(p.length===3){var ds=p[1]+'/'+p[2];if(!_ovDsToFull[ds])_ovDsToFull[ds]=fd;}});
+    var _ovLastDs=allDates.length?allDates[allDates.length-1]:'';
+    function _ovStopAvg(line){var fd=_ovDsToFull[_ovLastDs];if(!fd)return 0;var stops=(D.kpiStopByDateEq||{})[fd];if(!stops)return 0;var eqs=Object.keys(stops).filter(function(eq){return(!line||eq[0]===line)&&stops[eq]>0;});if(!eqs.length)return 0;return eqs.reduce(function(s,eq){return s+stops[eq]},0)/eqs.length;}
+    // 완전불량
+    function _ovFullDef(ln){
+      if(ln==='K'){var k1=D.lossByLineDate[_ovLast]&&D.lossByLineDate[_ovLast]['K1'];var k2=D.lossByLineDate[_ovLast]&&D.lossByLineDate[_ovLast]['K2'];var tp=(k1?k1.p:0)+(k2?k2.p:0);var td=(k1?k1.cd:0)+(k2?k2.cd:0);return tp>0?td/tp*100:0;}
+      if(ln==='H'){var dd=D.lossByLineDate[_ovLast]&&D.lossByLineDate[_ovLast]['H'];return dd&&dd.p>0?dd.dd/dd.p*100:0;}
+      var dd2=D.lossByLineDate[_ovLast]&&D.lossByLineDate[_ovLast][ln];return dd2&&dd2.p>0?dd2.cd/dd2.p*100:0;
+    }
+    var _ovFullDefT=0,_ovFullDefTP=0;['K1','K2','G'].forEach(function(l){var dd=D.lossByLineDate[_ovLast]&&D.lossByLineDate[_ovLast][l];if(dd&&dd.p>0){_ovFullDefTP+=dd.p;_ovFullDefT+=dd.cd;}});
+    var hdd=D.lossByLineDate[_ovLast]&&D.lossByLineDate[_ovLast]['H'];if(hdd&&hdd.p>0){_ovFullDefTP+=hdd.p;_ovFullDefT+=hdd.dd;}
+    var _ovFullDefTot=_ovFullDefTP>0?_ovFullDefT/_ovFullDefTP*100:0;
+    // 검사정지
+    var _ovInsp=D.inspAllRows||[];
+    function _ovInspTime(line){return _ovInsp.filter(function(r){return r.dateStr===_ovLast&&(!line||r.line===line)&&r.stop}).reduce(function(s,r){return s+(r.kpiTime||0)},0);}
+    // 기술조정
+    function _ovTech(line){var dd=D.lossDetailByDateEq[_ovLast]||{};var s=0;Object.keys(dd).forEach(function(eq){if(!line||eq[0]===line)s+=dd[eq].larr[9];});return s;}
+
+    h+='<div class="bx"><h3>'+t('prevDay')+' ('+_ovLast+') '+t('total')+' '+t('tabOverview')+'</h3>';
+    h+='<table class="sum-tbl" style="font-size:12px"><thead><tr><th>'+t('category')+'</th><th style="color:#60a5fa">Total</th>';
+    _ovLns.forEach(function(ln){h+='<th>'+ln+'</th>';});
+    h+='</tr></thead><tbody>';
+    // 가동설비
+    h+='<tr><td>'+t('equip')+'</td><td style="font-weight:700">'+_ovEqT+t('eqUnit')+'</td>';
+    _ovLns.forEach(function(ln){h+='<td>'+((_ovLS[ln]||{}).eq||0)+t('eqUnit')+'</td>';});h+='</tr>';
+    // Loss
+    h+='<tr><td>Loss</td><td style="font-weight:700">'+_ovLossTot.toFixed(1)+'%</td>';
+    _ovLns.forEach(function(ln){h+='<td>'+_ovLoss(ln).toFixed(1)+'%</td>';});h+='</tr>';
+    // 조정Loss
+    h+='<tr><td>'+t('lossDetailHdr')[0]+'Loss</td><td style="font-weight:700">'+_ovPmLoss(null).toFixed(1)+'%</td>';
+    _ovLns.forEach(function(ln){h+='<td>'+_ovPmLoss(ln).toFixed(1)+'%</td>';});h+='</tr>';
+    // 조정정지
+    h+='<tr><td>'+t('lossDetailHdr')[0]+t('stop')+'</td><td style="font-weight:700">'+Math.round(_ovStopAvg(null))+t('min')+'</td>';
+    _ovLns.forEach(function(ln){h+='<td>'+Math.round(_ovStopAvg(ln))+t('min')+'</td>';});h+='</tr>';
+    // 완전불량
+    h+='<tr><td>'+t('fullDef')+'</td><td style="font-weight:700">'+_ovFullDefTot.toFixed(1)+'%</td>';
+    _ovLns.forEach(function(ln){h+='<td>'+_ovFullDef(ln).toFixed(1)+'%</td>';});h+='</tr>';
+    // 검사정지
+    h+='<tr><td>'+t('tabInsp')+t('stop')+'</td><td style="font-weight:700">'+Math.round(_ovInspTime(null))+t('min')+'</td>';
+    _ovLns.forEach(function(ln){h+='<td>'+Math.round(_ovInspTime(ln))+t('min')+'</td>';});h+='</tr>';
+    // 기술조정
+    h+='<tr><td>'+t('lossDetailHdr')[9]+'</td><td style="font-weight:700">'+Math.round(_ovTech(null))+'ea</td>';
+    _ovLns.forEach(function(ln){var v=Math.round(_ovTech(ln));h+='<td>'+(v>0?v+'ea':'')+'</td>';});h+='</tr>';
+    h+='</tbody></table></div>';
+  }
+
+  // --- 1) Loss 히트맵 테이블 (클릭→Loss탭) ---
   h+='<div class="bx" style="cursor:pointer" onclick="go(1)"><h3>'+t('lossTitle')+' <em style="color:#94a3b8;font-size:10px">▶ '+t('lossDetail')+'</em></h3>';
   h+=buildHmLegend('loss');
   _buildLossDailyTableOnly=true;h+=buildLossDaily();_buildLossDailyTableOnly=false;
   h+='</div>';
 
-  // --- 2) Loss 그래프 ---
-  h+='<div class="bx"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('lossDaily')+' '+t('lossRate');
+  // --- 2) 일간 Loss 그래프 ---
+  h+='<div class="bx"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('ovLossChart');
   h+='<span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;font-size:9px;font-weight:400">';
   ['K1','K2','G','H','E','Total'].forEach(function(ln){h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:3px;background:'+LOSS_LINE_COLORS[ln]+'"></span>'+ln+'</span>';});
   h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #f59e0b"></span>'+t('target')+'6%</span>';
@@ -1564,7 +1642,7 @@ function buildOverviewPage(){
   h+='<canvas id="ovLossChart"></canvas></div>';
 
   // --- 3) Total 가동율 그래프 (클릭→가동율탭) ---
-  h+='<div class="bx" style="cursor:pointer" onclick="go(2)"><h3 style="display:flex;align-items:center;flex-wrap:wrap">Total '+t('utilTitle')+' <em style="color:#94a3b8;font-size:10px">▶ '+t('tabUtil')+'</em>';
+  h+='<div class="bx" style="cursor:pointer" onclick="go(2)"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('utilTitle')+' <em style="color:#94a3b8;font-size:10px">▶ '+t('tabUtil')+'</em>';
   h+='<span style="margin-left:auto;display:flex;gap:6px;font-size:9px;font-weight:400">';
   h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:3px;background:#f87171"></span>'+t('utilRate')+'</span>';
   h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #f59e0b"></span>'+t('utilTarget')+'90%</span>';
@@ -1572,7 +1650,7 @@ function buildOverviewPage(){
   h+='<canvas id="ovUtilChart"></canvas></div>';
 
   // --- 3.5) 전체 일자별 정지시간/불량수량 그래프 (클릭→정지시간탭) ---
-  h+='<div class="bx" style="cursor:pointer" onclick="go(3)"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('allDaily')+' <em style="color:#94a3b8;font-size:10px">▶ '+t('tabDaily')+'</em>';
+  h+='<div class="bx" style="cursor:pointer" onclick="go(3)"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('ovDailyTitle')+' <em style="color:#94a3b8;font-size:10px">▶ '+t('tabDaily')+'</em>';
   h+='<span style="margin-left:auto;display:flex;gap:6px;font-size:9px;font-weight:400">';
   h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:8px;background:#3b82f6B3;border-radius:2px"></span>'+t('dailyTimeMin')+'</span>';
   h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:3px;background:#ef4444"></span>'+t('defect')+'</span>';
@@ -1600,7 +1678,7 @@ function buildOverviewPage(){
     window._kpiDates={day:[sLastDate],week:sWeek,month:sMonth};
 
     // 4) KPI 표
-    h+='<div class="bx"><h3>'+t('kpiTitle')+' <em>'+t('kpiTarget')+KPI_TARGET+t('min')+'</em></h3>';
+    h+='<div class="bx"><h3>'+t('kpiTitle')+' = '+t('target')+' '+KPI_TARGET+t('min')+'</h3>';
     h+='<table class="sum-tbl"><thead><tr><th>'+t('category')+'</th><th style="color:#60a5fa">'+t('total')+'</th>';
     lines.forEach(function(ln){h+='<th style="color:'+lineColors[ln]+'">'+ln+'</th>';});
     h+='</tr></thead><tbody>';
@@ -1694,9 +1772,9 @@ function buildOverviewPage(){
     h+='</span></h3>';
     h+='<canvas id="ovInspChart" style="max-height:200px"></canvas></div>';
 
-    // 9) 완전치수 일자별 % 표
+    // 9) 완전+치수 현황
     var iLines2=[{ln:'K1',key:'cd'},{ln:'K2',key:'cd'},{ln:'G',key:'cd'},{ln:'H',key:'dd'}];
-    h+='<div class="bx"><h3>'+t('inspDefChart')+' '+t('date')+'별</h3><div class="hc">';
+    h+='<div class="bx"><h3>'+t('ovInspTblTitle')+'</h3><div class="hc">';
     h+='<table class="ht"><thead><tr><th>'+t('line')+'</th>';
     dates.forEach(function(d){var dt=new Date(d+'T00:00:00');h+='<th>'+(dt.getMonth()+1)+'/'+(dt.getDate())+'</th>';});
     h+='</tr></thead><tbody>';
@@ -1710,24 +1788,15 @@ function buildOverviewPage(){
     });
     h+='</tbody></table></div></div>';
 
-    // 10) 불량수량 + 정지시간 Worst 5
+    // 10) 검사기 불량,정지 Worst 5 (1개 테이블)
     var iEqMap={};
     iWeek.forEach(function(ds){inspRows.forEach(function(r){if(r.dateStr===ds){if(!iEqMap[r.eq])iEqMap[r.eq]={eq:r.eq,def:0,time:0};iEqMap[r.eq].def+=r.defect;if(r.stop)iEqMap[r.eq].time+=(r.kpiTime||0);}});});
-    var iEqArr=Object.keys(iEqMap).map(function(k){return iEqMap[k];});
-    var iByDef=iEqArr.slice().sort(function(a,b){return b.def-a.def}).slice(0,5);
-    var iByTime=iEqArr.slice().sort(function(a,b){return b.time-a.time}).slice(0,5);
-    h+='<div class="worst-grid">';
-    h+='<div class="bx"><h4 style="color:#ef4444;margin-bottom:8px;font-size:12px">'+t('inspDefW')+' Worst 5</h4>';
-    h+='<table class="worst-tbl"><thead><tr><th>#</th><th>'+t('equip')+'</th><th>'+t('inspDefW')+'</th></tr></thead><tbody>';
-    iByDef.forEach(function(item,i){h+='<tr style="cursor:pointer" onclick="showInspEqDetail(\''+item.eq.replace(/'/g,"\\'")+'\',\'week\')"><td>'+(i+1)+'</td><td>'+item.eq+'</td><td style="color:#ef4444;font-weight:700">'+Math.round(item.def).toLocaleString()+'</td></tr>';});
-    if(!iByDef.length)h+='<tr><td colspan="3" style="color:#94a3b8">'+t('noData')+'</td></tr>';
+    var iByDef=Object.keys(iEqMap).map(function(k){return iEqMap[k];}).sort(function(a,b){return b.def-a.def}).slice(0,5);
+    h+='<div class="bx"><h4 style="margin-bottom:8px;font-size:12px">'+t('ovInspWorstTitle')+'</h4>';
+    h+='<table class="worst-tbl"><thead><tr><th>#</th><th>'+t('equip')+'</th><th style="color:#ef4444">'+t('inspDefW')+'</th><th style="color:#60a5fa">'+t('inspTimeW')+'</th></tr></thead><tbody>';
+    iByDef.forEach(function(item,i){h+='<tr style="cursor:pointer" onclick="showInspEqDetail(\''+item.eq.replace(/'/g,"\\'")+'\',\'week\')"><td>'+(i+1)+'</td><td>'+item.eq+'</td><td style="color:#ef4444;font-weight:700">'+Math.round(item.def).toLocaleString()+'</td><td style="color:#60a5fa;font-weight:700">'+Math.round(item.time).toLocaleString()+t('min')+'</td></tr>';});
+    if(!iByDef.length)h+='<tr><td colspan="4" style="color:#94a3b8">'+t('noData')+'</td></tr>';
     h+='</tbody></table></div>';
-    h+='<div class="bx"><h4 style="color:#60a5fa;margin-bottom:8px;font-size:12px">'+t('inspTimeW')+' Worst 5</h4>';
-    h+='<table class="worst-tbl"><thead><tr><th>#</th><th>'+t('equip')+'</th><th>'+t('inspTimeW')+'</th></tr></thead><tbody>';
-    iByTime.forEach(function(item,i){h+='<tr style="cursor:pointer" onclick="showInspEqDetail(\''+item.eq.replace(/'/g,"\\'")+'\',\'week\')"><td>'+(i+1)+'</td><td>'+item.eq+'</td><td style="color:#60a5fa;font-weight:700">'+Math.round(item.time).toLocaleString()+t('min')+'</td></tr>';});
-    if(!iByTime.length)h+='<tr><td colspan="3" style="color:#94a3b8">'+t('noData')+'</td></tr>';
-    h+='</tbody></table></div>';
-    h+='</div>';
   }
   return h;
 }
@@ -1740,7 +1809,8 @@ function initOverviewLossChart(){
   var datasets=lines.map(function(ln){return{label:ln,data:dates.map(function(dt){var v=D.lossByLineDate[dt]&&D.lossByLineDate[dt][ln];return v&&v.r>0?Math.round(v.r*10000)/100:null;}),borderColor:LOSS_LINE_COLORS[ln],backgroundColor:'transparent',pointRadius:2,tension:0.3,spanGaps:true,borderWidth:1.5};});
   datasets.push({label:'Total',data:dates.map(function(dt){var tp=0,tl=0;lines.forEach(function(l){var dd=D.lossByLineDate[dt]&&D.lossByLineDate[dt][l];if(dd){tp+=dd.p;tl+=dd.p*dd.r;}});return tp>0?Math.round(tl/tp*10000)/100:null;}),borderColor:LOSS_LINE_COLORS.Total,backgroundColor:'transparent',pointRadius:2,tension:0.3,spanGaps:true,borderWidth:2});
   datasets.push({label:t('target')+'(6%)',data:dates.map(function(){return 6;}),borderColor:'#f59e0b',borderDash:[5,5],pointRadius:0,tension:0});
-  var ch=new Chart(canvas,{type:'line',data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),datasets:datasets},
+  var _lossLbl={id:'ovLossLbl',afterDatasetsDraw:function(chart){var ctx=chart.ctx;ctx.save();ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';var numDs=chart.data.datasets.length-1;for(var i=0;i<chart.data.labels.length;i++){var mx=-1,mxDs=-1;for(var d=0;d<numDs;d++){var v=chart.data.datasets[d].data[i];if(v!=null&&v>mx){mx=v;mxDs=d;}}if(mxDs>=0&&mx>0){var pt=chart.getDatasetMeta(mxDs).data[i];ctx.fillStyle=chart.data.datasets[mxDs].borderColor;ctx.fillText(mx.toFixed(1)+'%',pt.x,pt.y-4);}}ctx.restore();}};
+  var ch=new Chart(canvas,{type:'line',plugins:[_lossLbl],data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),datasets:datasets},
     options:{responsive:true,maintainAspectRatio:true,aspectRatio:2.5,plugins:{legend:{display:false}},
       scales:{x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'#1f2937'}},y:{ticks:{color:'#94a3b8',font:{size:9},callback:function(v){return v+'%'}},grid:{color:'#1f2937'},min:0}}}});
   charts.push(ch);
@@ -1774,9 +1844,18 @@ function initOverviewDailyChart(){
   var maxTime=0,fixedQty=10000,exceeded=false;
   D.daily.forEach(function(r){var t2=Math.round(r.avgTime||0);if(t2>maxTime)maxTime=t2;var d2=Math.round(r.defect);if(d2>fixedQty){fixedQty=Math.ceil(d2/1000)*1000;exceeded=true}});
   var fixedTime=Math.ceil(maxTime*1.1/10)*10||100;
+  var _dailyLbl={id:'ovDailyLbl',afterDatasetsDraw:function(chart){var ctx=chart.ctx;ctx.save();
+    // 막대(정지시간) 상단 흰색
+    var barDs=chart.data.datasets[0];var barMeta=chart.getDatasetMeta(0);
+    ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillStyle='#fff';
+    barMeta.data.forEach(function(bar,i){var v=barDs.data[i];if(v>0)ctx.fillText(v,bar.x,bar.y-2);});
+    // 꺾은선(불량수량) 위 빨간색
+    if(chart.data.datasets.length>1){var lineDs=chart.data.datasets[1];var lineMeta=chart.getDatasetMeta(1);ctx.fillStyle='#ef4444';
+    lineMeta.data.forEach(function(pt,i){var v=lineDs.data[i];if(v!=null&&v>0)ctx.fillText(Math.round(v).toLocaleString(),pt.x,pt.y-5);});}
+    ctx.restore();}};
   var ch=makeDailyChart('ovDailyChart',D.daily,'Total','#3b82f6',null,exceeded?fixedTime:null,exceeded?fixedQty:null);
-  // Override aspectRatio to match other overview charts
-  if(ch&&ch.options){ch.options.aspectRatio=2.5;ch.options.maintainAspectRatio=true;if(ch.options.plugins)ch.options.plugins.legend={display:false};ch.update();}
+  // Override aspectRatio + legend + add label plugin
+  if(ch&&ch.options){ch.options.aspectRatio=2.5;ch.options.maintainAspectRatio=true;if(ch.options.plugins)ch.options.plugins.legend={display:false};ch.config.plugins=[_dailyLbl];ch.update();}
 }
 // ===================== 요약 끝 =====================
 
