@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>현황 v14.8</title>
+<title>현황 v14.9</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -92,7 +92,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 현황 v14.8</h1>
+<h1>📊 현황 v14.9</h1>
 <div style="position:absolute;top:12px;right:20px;display:flex;gap:4px;align-items:center">
 <label class="file-btn" for="fileInput" id="fileBtnLabel" style="min-width:56px">파일선택</label>
 <button id="clearBtn" class="hd-btn" style="display:none" onclick="clearData()">초기화</button>
@@ -438,7 +438,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='14.8'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='14.9'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -2362,10 +2362,14 @@ function renderAll(){
     '<div class="tab" onclick="go(7)">'+t('tabInsp')+'</div>';
 
 
+  var _ovH='',_lsH='',_utH='';
+  try{_ovH=buildOverviewPage();}catch(e){console.error('buildOverviewPage error:',e);_ovH='<div style="color:red;padding:20px">Overview error: '+e.message+'</div>';}
+  try{_lsH=buildLossPage();}catch(e){console.error('buildLossPage error:',e);_lsH='<div style="color:red;padding:20px">Loss error: '+e.message+'</div>';}
+  try{_utH=buildUtilPage();}catch(e){console.error('buildUtilPage error:',e);_utH='<div style="color:red;padding:20px">Util error: '+e.message+'</div>';}
   document.getElementById('root').innerHTML=
-  '<div class="pn on" id="overviewPanel">'+buildOverviewPage()+'</div>'+
-  '<div class="pn" id="lossPanel">'+buildLossPage()+'</div>'+
-  '<div class="pn" id="utilPanel">'+buildUtilPage()+'</div>'+
+  '<div class="pn on" id="overviewPanel">'+_ovH+'</div>'+
+  '<div class="pn" id="lossPanel">'+_lsH+'</div>'+
+  '<div class="pn" id="utilPanel">'+_utH+'</div>'+
   '<div class="pn">'+
     '<div class="bx"><h3>📅 '+t('allDaily')+'<em>Total '+D.totalRec.toLocaleString()+t('items')+'</em></h3><canvas id="dAll"></canvas></div>'+
     '<div class="bx"><h3>📊 '+t('allStopVs')+'</h3><div class="hc" id="tAllS"></div></div>'+
@@ -2391,27 +2395,27 @@ function renderAll(){
   [D.daily_G,D.daily_H,D.daily_K].forEach(function(ld){ld.forEach(function(r){var t=Math.round(r.avgTime||0);if(t>maxTime)maxTime=t;var d=Math.round(r.defect);if(d>fixedQty){fixedQty=Math.ceil(d/1000)*1000;exceeded=true}})});
   var fixedTime=Math.ceil(maxTime*1.1/10)*10||100;
   if(exceeded){D.daily.forEach(function(r){var t=Math.round(r.avgTime||0);var ft=Math.ceil(t*1.1/10)*10;if(ft>fixedTime)fixedTime=ft;var d=Math.round(r.defect);if(d>fixedQty)fixedQty=Math.ceil(d/1000)*1000})}
-  charts.push(makeDailyChart('dAll', D.daily, 'Total', '#3b82f6', null, exceeded?fixedTime:null, exceeded?fixedQty:null));
-  document.getElementById('tAllS').innerHTML=buildStopTableWide(D.daily);
-  charts.push(makeDailyChart('dG', D.daily_G, 'G Line', '#06b6d4', 'G', fixedTime, fixedQty));
-  document.getElementById('tGS').innerHTML=buildStopTableWide(D.daily_G);
-  charts.push(makeDailyChart('dH', D.daily_H, 'H Line', '#22c55e', 'H', fixedTime, fixedQty));
-  document.getElementById('tHS').innerHTML=buildStopTableWide(D.daily_H);
-  charts.push(makeDailyChart('dK', D.daily_K, 'K Line', '#f59e0b', 'K', fixedTime, fixedQty));
-  document.getElementById('tKS').innerHTML=buildStopTableWide(D.daily_K);
+  try{charts.push(makeDailyChart('dAll', D.daily, 'Total', '#3b82f6', null, exceeded?fixedTime:null, exceeded?fixedQty:null));}catch(e){console.error('dAll chart error:',e);}
+  try{document.getElementById('tAllS').innerHTML=buildStopTableWide(D.daily);}catch(e){console.error('tAllS error:',e);}
+  try{charts.push(makeDailyChart('dG', D.daily_G, 'G Line', '#06b6d4', 'G', fixedTime, fixedQty));}catch(e){console.error('dG chart error:',e);}
+  try{document.getElementById('tGS').innerHTML=buildStopTableWide(D.daily_G);}catch(e){console.error('tGS error:',e);}
+  try{charts.push(makeDailyChart('dH', D.daily_H, 'H Line', '#22c55e', 'H', fixedTime, fixedQty));}catch(e){console.error('dH chart error:',e);}
+  try{document.getElementById('tHS').innerHTML=buildStopTableWide(D.daily_H);}catch(e){console.error('tHS error:',e);}
+  try{charts.push(makeDailyChart('dK', D.daily_K, 'K Line', '#f59e0b', 'K', fixedTime, fixedQty));}catch(e){console.error('dK chart error:',e);}
+  try{document.getElementById('tKS').innerHTML=buildStopTableWide(D.daily_K);}catch(e){console.error('tKS error:',e);}
 
-  document.getElementById('hm_def').innerHTML=buildDailyHT(D.hm_def,'불량수량',D.eq_order,D.all_dates,false,'def');
+  try{document.getElementById('hm_def').innerHTML=buildDailyHT(D.hm_def,'불량수량',D.eq_order,D.all_dates,false,'def');}catch(e){console.error('hm_def error:',e);}
   // 정지히트맵: 캐시 무관하게 항상 停만 필터링하여 렌더링
   var _htStop={};
   (D.allRows||[]).forEach(function(rh){if(rh.stop){var k=rh.eq+'|'+rh.ds;_htStop[k]=(_htStop[k]||0)+rh.time}});
   var _hmTimeFiltered=[];for(var _tk in _htStop){var _sp=_tk.split('|');_hmTimeFiltered.push({설비호:_sp[0],일자str:_sp[1],time:_htStop[_tk]})}
-  document.getElementById('hm_time').innerHTML=buildDailyHT(_hmTimeFiltered,'time',D.eq_order,D.all_dates,true,'stop');
-  initUtilCharts();
+  try{document.getElementById('hm_time').innerHTML=buildDailyHT(_hmTimeFiltered,'time',D.eq_order,D.all_dates,true,'stop');}catch(e){console.error('hm_time error:',e);}
+  try{initUtilCharts();}catch(e){console.error('initUtilCharts error:',e);}
   // 요약 페이지 차트 초기화
-  initOverviewLossChart();
-  initOverviewUtilChart();
-  initOverviewInspChart();
-  initOverviewDailyChart();
+  try{initOverviewLossChart();}catch(e){console.error('ovLoss error:',e);}
+  try{initOverviewUtilChart();}catch(e){console.error('ovUtil error:',e);}
+  try{initOverviewInspChart();}catch(e){console.error('ovInsp error:',e);}
+  try{initOverviewDailyChart();}catch(e){console.error('ovDaily error:',e);}
   // 가로 스크롤 테이블 우측 기본
   setTimeout(function(){document.querySelectorAll('.hc').forEach(function(el){el.scrollLeft=el.scrollWidth;});},100);
 }
