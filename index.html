@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>현황 v13.8</title>
+<title>현황 v13.9</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -70,11 +70,12 @@ table.ht thead th:first-child{z-index:4}
 .loading.show{display:flex}
 .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:1000;justify-content:center;align-items:center;padding:16px}
 .modal-overlay.show{display:flex}
-.modal{background:#0a0a0a;border-radius:12px;border:1px solid #3b82f6;max-width:90vw;width:100%;max-height:80vh;overflow:auto;padding:16px}
+.modal{background:#0a0a0a;border-radius:12px;border:1px solid #3b82f6;max-width:96vw;width:100%;max-height:85vh;overflow:hidden;padding:16px;display:flex;flex-direction:column}
+.modal #modalBody{overflow:auto;flex:1;min-height:0}
 .modal h3{color:#60a5fa;font-size:15px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #1a1a1a}
-.modal table{border-collapse:collapse;width:100%;font-size:12px}
-.modal th{background:#1a1a1a;color:#e2e8f0;padding:6px 8px;text-align:left;position:sticky;top:0}
-.modal td{padding:5px 8px;border-bottom:1px solid #1a1a1a;color:#cbd5e1}
+.modal table{border-collapse:collapse;width:max-content;font-size:12px}
+.modal th{background:#1a1a1a;color:#e2e8f0;padding:6px 8px;text-align:left;position:sticky;top:0;white-space:nowrap}
+.modal td{padding:5px 8px;border-bottom:1px solid #1a1a1a;color:#cbd5e1;white-space:nowrap}
 .modal tr:hover td{background:#1a1a1a}
 .modal .close-btn{float:right;background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;padding:0 4px;line-height:1}
 .modal .close-btn:hover{color:#ef4444}
@@ -91,7 +92,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 현황 v13.8</h1>
+<h1>📊 현황 v13.9</h1>
 <div style="position:absolute;top:12px;right:20px;display:flex;gap:4px;align-items:center">
 <label class="file-btn" for="fileInput" id="fileBtnLabel" style="min-width:56px">파일선택</label>
 <button id="clearBtn" class="hd-btn" style="display:none" onclick="clearData()">초기화</button>
@@ -437,7 +438,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='13.8'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='13.9'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
