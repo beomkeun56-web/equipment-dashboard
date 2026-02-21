@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Production Performance v9.7</title>
+<title>Production Performance v9.8</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v9.7</h1>
+<h1>📊 Production Performance v9.8</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -782,10 +782,17 @@ function processWorkbook(wb){
     var m={};
     for(var di=0;di<rows.length;di++){
       var rr=rows[di];
-      if(!m[rr.ds])m[rr.ds]={일자str:rr.ds,cnt:0,defect:0,time:0,stop:0};
+      if(!m[rr.ds])m[rr.ds]={일자str:rr.ds,cnt:0,defect:0,time:0,stop:0,_eqStop:{}};
       m[rr.ds].cnt++;m[rr.ds].defect+=rr.defect;m[rr.ds].time+=rr.time;if(rr.stop)m[rr.ds].stop++;
+      if(rr.stop){if(!m[rr.ds]._eqStop[rr.eq])m[rr.ds]._eqStop[rr.eq]=0;m[rr.ds]._eqStop[rr.eq]+=rr.time;}
     }
-    return all_dates.map(function(d){return m[d]||{일자str:d,cnt:0,defect:0,time:0,stop:0}});
+    return all_dates.map(function(d){
+      var r=m[d]||{일자str:d,cnt:0,defect:0,time:0,stop:0,_eqStop:{}};
+      var eqs=Object.keys(r._eqStop);
+      r.avgTime=eqs.length>0?eqs.reduce(function(s,eq){return s+r._eqStop[eq]},0)/eqs.length:0;
+      delete r._eqStop;
+      return r;
+    });
   }
   var rowsByLine={G:[],H:[],K:[]};
   for(var ri=0;ri<allRows.length;ri++){var rl=allRows[ri].line;if(rowsByLine[rl])rowsByLine[rl].push(allRows[ri]);}
@@ -1132,13 +1139,13 @@ function makeDailyChart(canvasId, data, title, barColor, lineFilt, yMax, y1Max){
   });
   var labels=data.map(function(r){var d=r['일자str'];return[d,(eqCntByDate[d]||0)+t('eqUnit')]});
   var ch=new Chart(canvasId,{type:'bar',data:{labels:labels,datasets:[
-    {label:t('dailyTimeMin'),data:data.map(function(r){return Math.round(r.time)}),backgroundColor:barColor+'B3',borderRadius:4,yAxisID:'y',order:2},
+    {label:t('dailyTimeMin')+'('+t('hmAvg')+')',data:data.map(function(r){return Math.round(r.avgTime||0)}),backgroundColor:barColor+'B3',borderRadius:4,yAxisID:'y',order:2},
     {label:t('defect'),data:data.map(function(r){return Math.round(r.defect)}),type:'line',borderColor:'#ef4444',borderWidth:2,pointRadius:3,pointBackgroundColor:'#ef4444',yAxisID:'y1',tension:.3,order:1}
   ]},options:{responsive:true,maintainAspectRatio:true,onClick:function(evt,els){
     if(!els.length)return;var idx=els[0].index;var date=data[idx]['일자str'];showDayDetail(date,lineFilt||null);
   },plugins:{legend:{labels:{color:'#94a3b8',font:{size:10}}},tooltip:{backgroundColor:'#0a0a0a',titleColor:'#60a5fa',bodyColor:'#e2e8f0',callbacks:{title:function(items){if(!items.length)return'';var idx=items[0].dataIndex;return data[idx]['일자str']+' ('+( eqCntByDate[data[idx]['일자str']]||0)+'대)'},label:function(c){return c.dataset.label+': '+c.parsed.y.toLocaleString()}}}},scales:{
     x:{ticks:{color:'#94a3b8',font:{size:10},callback:function(val,idx){var lb=this.getLabelForValue(idx);if(Array.isArray(lb))return lb;return[lb]}},grid:{color:'#1a1a1a'}},
-    y:{position:'left',ticks:{color:barColor,callback:function(v){return v.toLocaleString()}},grid:{color:'#1a1a1a'},title:{display:true,text:t('dailyTimeMin'),color:barColor,font:{size:10}},beginAtZero:true,max:yMax||undefined},
+    y:{position:'left',ticks:{color:barColor,callback:function(v){return v.toLocaleString()}},grid:{color:'#1a1a1a'},title:{display:true,text:t('dailyTimeMin')+'('+t('hmAvg')+')',color:barColor,font:{size:10}},beginAtZero:true,max:yMax||undefined},
     y1:{position:'right',ticks:{color:'#ef4444',font:{size:9},callback:function(v){return v.toLocaleString()}},grid:{drawOnChartArea:false},title:{display:true,text:t('defect'),color:'#ef4444',font:{size:10}},beginAtZero:true,max:y1Max||undefined}
   }}});
   return ch;
@@ -1816,9 +1823,9 @@ function renderAll(){
   renderWorstWeekChart();
 
   var maxTime=0,fixedQty=10000,exceeded=false;
-  [D.daily_G,D.daily_H,D.daily_K].forEach(function(ld){ld.forEach(function(r){var t=Math.round(r.time);if(t>maxTime)maxTime=t;var d=Math.round(r.defect);if(d>fixedQty){fixedQty=Math.ceil(d/1000)*1000;exceeded=true}})});
-  var fixedTime=Math.ceil(maxTime*1.1/100)*100||100;
-  if(exceeded){D.daily.forEach(function(r){var t=Math.round(r.time);var ft=Math.ceil(t*1.1/100)*100;if(ft>fixedTime)fixedTime=ft;var d=Math.round(r.defect);if(d>fixedQty)fixedQty=Math.ceil(d/1000)*1000})}
+  [D.daily_G,D.daily_H,D.daily_K].forEach(function(ld){ld.forEach(function(r){var t=Math.round(r.avgTime||0);if(t>maxTime)maxTime=t;var d=Math.round(r.defect);if(d>fixedQty){fixedQty=Math.ceil(d/1000)*1000;exceeded=true}})});
+  var fixedTime=Math.ceil(maxTime*1.1/10)*10||100;
+  if(exceeded){D.daily.forEach(function(r){var t=Math.round(r.avgTime||0);var ft=Math.ceil(t*1.1/10)*10;if(ft>fixedTime)fixedTime=ft;var d=Math.round(r.defect);if(d>fixedQty)fixedQty=Math.ceil(d/1000)*1000})}
   charts.push(makeDailyChart('dAll', D.daily, 'Total', '#3b82f6', null, exceeded?fixedTime:null, exceeded?fixedQty:null));
   document.getElementById('tAllS').innerHTML=buildStopTableWide(D.daily);
   charts.push(makeDailyChart('dG', D.daily_G, 'G Line', '#06b6d4', 'G', fixedTime, fixedQty));
