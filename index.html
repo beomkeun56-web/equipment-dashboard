@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>현황 v12.2</title>
+<title>현황 v12.3</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -90,7 +90,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 현황 v12.2</h1>
+<h1>📊 현황 v12.3</h1>
 <div style="position:absolute;top:12px;right:20px;display:flex;gap:4px;align-items:center">
 <label class="file-btn" for="fileInput" id="fileBtnLabel" style="min-width:56px">파일선택</label>
 <button id="clearBtn" class="hd-btn" style="display:none" onclick="clearData()">초기화</button>
@@ -424,7 +424,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='12.2'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='12.3'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -1552,7 +1552,7 @@ function buildOverviewPage(){
   // --- 1) Loss 요약 히트맵 테이블 (클릭→Loss탭) ---
   h+='<div class="bx" style="cursor:pointer" onclick="go(1)"><h3>'+t('lossTitle')+' <em style="color:#94a3b8;font-size:10px">▶ '+t('lossDetail')+'</em></h3>';
   h+=buildHmLegend('loss');
-  h+=buildLossDaily();
+  _buildLossDailyTableOnly=true;h+=buildLossDaily();_buildLossDailyTableOnly=false;
   h+='</div>';
 
   // --- 2) Loss 그래프 (세로 축소) ---
@@ -1813,10 +1813,12 @@ function buildLossDaily(){
   h+='<td style="'+tdS+';background:#e8e8e8;color:#e65523;font-weight:700;min-width:70px">6.00%</td>';
   dates.forEach(function(){h+='<td style="'+tdS+';color:#e65523">6.00%</td>';});
   h+='</tr></tbody></table></div>';
+  if(_buildLossDailyTableOnly)return h;
   h+='</div><div class="bx"><h3>📈 '+t('lossDaily')+' '+t('lossRate')+' '+t('worst5Trend')+'</h3>';
   h+='<canvas id="lossChart"></canvas>';
   return h;
 }
+var _buildLossDailyTableOnly=false;
 
 function buildLossDetail(){
   var dates=D.lossDates&&D.lossDates.length?D.lossDates:(D.stDates||[]);
