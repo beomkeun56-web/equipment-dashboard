@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>현황 v13.2</title>
+<title>현황 v13.3</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -91,7 +91,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 현황 v13.2</h1>
+<h1>📊 현황 v13.3</h1>
 <div style="position:absolute;top:12px;right:20px;display:flex;gap:4px;align-items:center">
 <label class="file-btn" for="fileInput" id="fileBtnLabel" style="min-width:56px">파일선택</label>
 <button id="clearBtn" class="hd-btn" style="display:none" onclick="clearData()">초기화</button>
@@ -437,7 +437,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='13.2'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='13.3'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -968,14 +968,14 @@ function getHmStyle(v,mx,page){
 function buildHmLegend(page){
   var cfg=_hmCfg[page||'def']||_hmCfg.def;
   var pal=cfg.pal==='custom'?_buildCustomPalette(_loadCustomPal(page||'def')):(HM_PALETTES[cfg.pal]||HM_PALETTES.red);
-  var h='<div class="lg"><div class="li"><div class="lc" style="background:#fff;border:1px solid #c0c0c0"></div>0</div>';
+  var h='<div class="lg"><div class="li"><div class="lc" style="background:#fff;border:1px solid #333"></div>0</div>';
   for(var i=0;i<7;i++){h+='<div class="li"><div class="lc" style="background:'+pal[i].bg+'"></div>'+(i+1)+'</div>';}
   return h+'</div>';
 }
 
 function buildHmSettings(page){
   var cfg=_hmCfg[page]||_hmCfg.def;
-  var ss='font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid #c0c0c0;cursor:pointer;';
+  var ss='font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid #333;cursor:pointer;';
   var h='<span style="color:#666;font-size:11px;font-weight:700">기준</span>';
   [{k:'all',l:'전체'},{k:'row',l:'세로'},{k:'col',l:'가로'}].forEach(function(o){
     var on=o.k===cfg.axis;
@@ -1216,29 +1216,29 @@ function showEqHeatmap(eq){
   document.getElementById('modalTitle').textContent=eq+' '+t('eqHmTitle')+' ('+t('eqHmDays')+' '+recentDates.length+t('eqHmDaysSuffix')+')';
   var hm='<div style="overflow-x:auto">';
   hm+='<table style="border-collapse:collapse;width:100%;font-size:12px">';
-  hm+='<thead><tr><th style="background:#e8e8e8;color:#333;padding:6px 4px;border:1px solid #c0c0c0;white-space:nowrap">'+t('eqHmDate')+'</th>';
-  recentDates.forEach(function(d){hm+='<th style="background:#e8e8e8;color:#333;padding:6px 4px;border:1px solid #c0c0c0;font-size:10px;white-space:nowrap">'+d+'</th>'});
-  hm+='<th style="background:#1a1a1a;color:#e2e8f0;font-weight:700;padding:6px 4px;border:1px solid #c0c0c0">'+t('total')+'</th></tr></thead><tbody>';
+  hm+='<thead><tr><th style="background:#1a1a1a;color:#e2e8f0;padding:6px 4px;border:1px solid #333;white-space:nowrap">'+t('eqHmDate')+'</th>';
+  recentDates.forEach(function(d){hm+='<th style="background:#1a1a1a;color:#e2e8f0;padding:6px 4px;border:1px solid #333;font-size:10px;white-space:nowrap">'+d+'</th>'});
+  hm+='<th style="background:#1a1a1a;color:#e2e8f0;font-weight:700;padding:6px 4px;border:1px solid #333">'+t('total')+'</th></tr></thead><tbody>';
 
   // Time row
-  hm+='<tr><th style="background:#e8e8e8;color:#e65523;padding:6px 8px;border:1px solid #c0c0c0;white-space:nowrap;font-weight:700">'+t('eqHmStop')+'</th>';
+  hm+='<tr><th style="background:#1a1a1a;color:#e65523;padding:6px 8px;border:1px solid #333;white-space:nowrap;font-weight:700">'+t('eqHmStop')+'</th>';
   var sumT=0;
   recentDates.forEach(function(d){
     var v=dayTime[d]||0;sumT+=v;
     var sty=v?getHmStyle(v,mxT,'stop'):'';
-    hm+='<td style="padding:6px 4px;border:1px solid #c0c0c0;text-align:center;font-size:11px;cursor:pointer;background:#fff;color:#333;'+sty+'" onclick="showDetail(\''+eq+'\',\''+d+'\',\'time\')">'+(v?Math.round(v).toLocaleString():'')+'</td>';
+    hm+='<td style="padding:6px 4px;border:1px solid #333;text-align:center;font-size:11px;cursor:pointer;background:#000;color:#cbd5e1;'+sty+'" onclick="showDetail(\''+eq+'\',\''+d+'\',\'time\')">'+(v?Math.round(v).toLocaleString():'')+'</td>';
   });
-  hm+='<td style="background:#1a1a1a;font-weight:700;color:#e2e8f0;padding:6px 4px;border:1px solid #c0c0c0;text-align:center">'+Math.round(sumT).toLocaleString()+'</td></tr>';
+  hm+='<td style="background:#1a1a1a;font-weight:700;color:#e2e8f0;padding:6px 4px;border:1px solid #333;text-align:center">'+Math.round(sumT).toLocaleString()+'</td></tr>';
 
   // Defect row
-  hm+='<tr><th style="background:#e8e8e8;color:#c81914;padding:6px 8px;border:1px solid #c0c0c0;white-space:nowrap;font-weight:700">'+t('eqHmDef')+'</th>';
+  hm+='<tr><th style="background:#1a1a1a;color:#c81914;padding:6px 8px;border:1px solid #333;white-space:nowrap;font-weight:700">'+t('eqHmDef')+'</th>';
   var sumD=0;
   recentDates.forEach(function(d){
     var v=dayDef[d]||0;sumD+=v;
     var sty=v?getHmStyle(v,mxD,'def'):'';
-    hm+='<td style="padding:6px 4px;border:1px solid #c0c0c0;text-align:center;font-size:11px;cursor:pointer;background:#fff;color:#333;'+sty+'" onclick="showDetail(\''+eq+'\',\''+d+'\',\'defect\')">'+(v?Math.round(v).toLocaleString():'')+'</td>';
+    hm+='<td style="padding:6px 4px;border:1px solid #333;text-align:center;font-size:11px;cursor:pointer;background:#000;color:#cbd5e1;'+sty+'" onclick="showDetail(\''+eq+'\',\''+d+'\',\'defect\')">'+(v?Math.round(v).toLocaleString():'')+'</td>';
   });
-  hm+='<td style="background:#1a1a1a;font-weight:700;color:#e2e8f0;padding:6px 4px;border:1px solid #c0c0c0;text-align:center">'+Math.round(sumD).toLocaleString()+'</td></tr>';
+  hm+='<td style="background:#1a1a1a;font-weight:700;color:#e2e8f0;padding:6px 4px;border:1px solid #333;text-align:center">'+Math.round(sumD).toLocaleString()+'</td></tr>';
 
   hm+='</tbody></table></div>';
 
@@ -1721,29 +1721,38 @@ function buildOverviewPage(){
     dates.forEach(function(d){h+='<option value="'+d+'"'+(d===_ovLast?' selected':'')+'>'+d+'</option>';});
     h+='</select></span></h3>';
     var _ovLnC={G:'#06b6d4',H:'#22c55e',K:'#f59e0b'};var _ovLnBg={G:'rgba(6,182,212,0.08)',H:'rgba(34,197,94,0.08)',K:'rgba(245,158,11,0.08)'};
-    h+='<table class="sum-tbl ov-sum"><thead><tr><th>'+t('category')+'</th><th style="color:#60a5fa">Total</th>';
-    _ovLns.forEach(function(ln){h+='<th style="color:'+_ovLnC[ln]+';background:rgba('+{G:'6,182,212',H:'34,197,94',K:'245,158,11'}[ln]+',0.10)">'+ln+'</th>';});
+    // 목표값
+    var _ovTgt={equip:null,loss:6,pmLoss:1,pmStop:50,fullDef:0.8,inspStop:20,tech:null};
+    // 달성율 계산: % 항목은 목표 이하가 달성 (실적/목표*100 역수), 시간도 목표 이하가 달성
+    function _ovAchv(val,tgt,isLower){if(tgt==null||tgt===0)return null;if(isLower)return tgt/val*100;return val/tgt*100;}
+    function _ovAchvTd(val,tgt){if(tgt==null)return'<td>-</td>';var a=val<=0?100:(val<=tgt?100:Math.round(tgt/val*100));var clr=a>=100?'#22c55e':'#ef4444';return'<td style="color:'+clr+';font-weight:700">'+a+'%</td>';}
+    function _ovAchvTdMin(val,tgt){if(tgt==null)return'<td>-</td>';var a=val<=0?100:(val<=tgt?100:Math.round(tgt/val*100));var clr=a>=100?'#22c55e':'#ef4444';return'<td style="color:'+clr+';font-weight:700">'+a+'%</td>';}
+    h+='<table class="sum-tbl ov-sum"><thead><tr><th>'+t('category')+'</th><th>목표</th><th style="color:#60a5fa">실적</th><th>달성율</th>';
+    _ovLns.forEach(function(ln){h+='<th style="color:'+_ovLnC[ln]+';background:rgba('+{G:'6,182,212',H:'34,197,94',K:'245,158,11'}[ln]+',0.10)">'+ln+' Line</th>';});
     h+='</tr></thead><tbody>';
     // 가동설비
-    h+='<tr><td>'+t('equip')+'</td><td style="font-weight:700">'+_ovEqT+t('eqUnit')+'</td>';
+    h+='<tr><td>'+t('equip')+'</td><td>-</td><td style="font-weight:700">'+_ovEqT+t('eqUnit')+'</td><td>-</td>';
     _ovLns.forEach(function(ln){h+='<td style="background:'+_ovLnBg[ln]+'">'+((_ovLS[ln]||{}).eq||0)+t('eqUnit')+'</td>';});h+='</tr>';
     // Loss
-    h+='<tr><td>Loss</td><td onclick="showOvSumPopup(\'loss\',null)" style="font-weight:700">'+_ovLossTot.toFixed(1)+'%</td>';
+    h+='<tr><td>Loss</td><td>6%</td><td onclick="showOvSumPopup(\'loss\',null)" style="font-weight:700">'+_ovLossTot.toFixed(1)+'%</td>'+_ovAchvTd(_ovLossTot,6);
     _ovLns.forEach(function(ln){h+='<td onclick="showOvSumPopup(\'loss\',\''+ln+'\')" style="background:'+_ovLnBg[ln]+'">'+_ovLoss(ln).toFixed(1)+'%</td>';});h+='</tr>';
     // 조정Loss
-    h+='<tr><td>'+t('lossDetailHdr')[0]+'Loss</td><td onclick="showOvSumPopup(\'pmLoss\',null)" style="font-weight:700">'+_ovPmLoss(null).toFixed(1)+'%</td>';
+    var _pmLT=_ovPmLoss(null);
+    h+='<tr><td>'+t('lossDetailHdr')[0]+'Loss</td><td>1%</td><td onclick="showOvSumPopup(\'pmLoss\',null)" style="font-weight:700">'+_pmLT.toFixed(1)+'%</td>'+_ovAchvTd(_pmLT,1);
     _ovLns.forEach(function(ln){h+='<td onclick="showOvSumPopup(\'pmLoss\',\''+ln+'\')" style="background:'+_ovLnBg[ln]+'">'+_ovPmLoss(ln).toFixed(1)+'%</td>';});h+='</tr>';
     // 조정정지
-    h+='<tr><td>'+t('lossDetailHdr')[0]+t('stop')+'</td><td onclick="showOvSumPopup(\'pmStop\',null)" style="font-weight:700">'+Math.round(_ovStopAvg(null))+t('min')+'</td>';
+    var _psT=Math.round(_ovStopAvg(null));
+    h+='<tr><td>'+t('lossDetailHdr')[0]+t('stop')+'</td><td>50분</td><td onclick="showOvSumPopup(\'pmStop\',null)" style="font-weight:700">'+_psT+t('min')+'</td>'+_ovAchvTdMin(_psT,50);
     _ovLns.forEach(function(ln){h+='<td onclick="showOvSumPopup(\'pmStop\',\''+ln+'\')" style="background:'+_ovLnBg[ln]+'">'+Math.round(_ovStopAvg(ln))+t('min')+'</td>';});h+='</tr>';
     // 완전불량
-    h+='<tr><td>'+t('fullDef')+'</td><td onclick="showOvSumPopup(\'fullDef\',null)" style="font-weight:700">'+_ovFullDefTot.toFixed(1)+'%</td>';
+    h+='<tr><td>'+t('fullDef')+'</td><td>0.8%</td><td onclick="showOvSumPopup(\'fullDef\',null)" style="font-weight:700">'+_ovFullDefTot.toFixed(1)+'%</td>'+_ovAchvTd(_ovFullDefTot,0.8);
     _ovLns.forEach(function(ln){h+='<td onclick="showOvSumPopup(\'fullDef\',\''+ln+'\')" style="background:'+_ovLnBg[ln]+'">'+_ovFullDef(ln).toFixed(1)+'%</td>';});h+='</tr>';
     // 검사정지
-    h+='<tr><td>'+t('tabInsp')+t('stop')+'</td><td onclick="showOvSumPopup(\'inspStop\',null)" style="font-weight:700">'+Math.round(_ovInspTime(null))+t('min')+'</td>';
+    var _isT=Math.round(_ovInspTime(null));
+    h+='<tr><td>'+t('tabInsp')+t('stop')+'</td><td>20분</td><td onclick="showOvSumPopup(\'inspStop\',null)" style="font-weight:700">'+_isT+t('min')+'</td>'+_ovAchvTdMin(_isT,20);
     _ovLns.forEach(function(ln){h+='<td onclick="showOvSumPopup(\'inspStop\',\''+ln+'\')" style="background:'+_ovLnBg[ln]+'">'+Math.round(_ovInspTime(ln))+t('min')+'</td>';});h+='</tr>';
     // 기술조정
-    h+='<tr><td>'+t('lossDetailHdr')[9]+'</td><td onclick="showOvSumPopup(\'tech\',null)" style="font-weight:700">'+Math.round(_ovTech(null))+'ea</td>';
+    h+='<tr><td>'+t('lossDetailHdr')[9]+'</td><td>-</td><td onclick="showOvSumPopup(\'tech\',null)" style="font-weight:700">'+Math.round(_ovTech(null))+'ea</td><td>-</td>';
     _ovLns.forEach(function(ln){var v=Math.round(_ovTech(ln));h+='<td onclick="showOvSumPopup(\'tech\',\''+ln+'\')" style="background:'+_ovLnBg[ln]+'">'+(v>0?v+'ea':'')+'</td>';});h+='</tr>';
     h+='</tbody></table></div>';
   }
@@ -1797,7 +1806,7 @@ function buildOverviewPage(){
     // 4) KPI 표
     h+='<div class="bx"><h3>'+t('kpiTitle')+' = '+t('target')+' '+KPI_TARGET+t('min')+'</h3>';
     h+='<table class="sum-tbl"><thead><tr><th>'+t('category')+'</th><th style="color:#60a5fa">'+t('total')+'</th>';
-    lines.forEach(function(ln){h+='<th style="color:'+lineColors[ln]+'">'+ln+'</th>';});
+    lines.forEach(function(ln){h+='<th style="color:'+lineColors[ln]+'">'+ln+' Line</th>';});
     h+='</tr></thead><tbody>';
     [{label:t('yesterday'),dts:[sLastDate],pk:'day'},{label:t('weekly'),dts:sWeek,pk:'week'},{label:t('monthly'),dts:sMonth,pk:'month'}].forEach(function(p){
       var allV=p.dts.length===1?_getAllAvg(p.dts[0]):_getAllAvgM(p.dts);
@@ -1868,7 +1877,7 @@ function buildOverviewPage(){
     // 7) 검사기 조정현황
     h+='<div class="bx"><h3>'+t('inspKpi')+' ('+t('prevDay')+': '+iLastDate+')</h3>';
     h+='<table class="sum-tbl" style="font-size:12px"><thead><tr><th></th><th style="color:#60a5fa">'+t('total')+'</th>';
-    iLines.forEach(function(ln){h+='<th style="color:'+iColors[ln]+'">'+ln+'</th>';});
+    iLines.forEach(function(ln){h+='<th style="color:'+iColors[ln]+'">'+ln+' Line</th>';});
     h+='</tr></thead><tbody>';
     var iAll=_iSum([iLastDate],null);
     h+='<tr><td style="font-size:10px;color:#94a3b8">'+t('inspDefW')+'</td>';
@@ -2030,13 +2039,13 @@ function buildLossDaily(){
   if(lossCfg.axis==='col'){colMx['_accum']=0;lines.forEach(function(ln){if(accumVals[ln]>colMx['_accum'])colMx['_accum']=accumVals[ln]});dates.forEach(function(dt){var cm=0;lines.forEach(function(ln){if(vals[ln][dt]>cm)cm=vals[ln][dt]});colMx[dt]=Math.max(cm,lossFloor)||0.01});colMx['_accum']=Math.max(colMx['_accum'],lossFloor)||0.01}
   function getLossMx(ln,dt){if(lossCfg.axis==='row')return rowMx[ln]||0.01;if(lossCfg.axis==='col')return colMx[dt]||0.01;return allMx||0.01}
   // 3) 렌더링
-  var thS='background:#e8e8e8;color:#333;padding:5px 8px;font-size:11px;border:1px solid #c0c0c0;white-space:nowrap;text-align:center';
-  var tdS='padding:4px 8px;font-size:11px;border:1px solid #c0c0c0;text-align:center;white-space:nowrap;background:#fff;color:#333';
+  var thS='background:#1a1a1a;color:#e2e8f0;padding:5px 8px;font-size:11px;border:1px solid #333;white-space:nowrap;text-align:center';
+  var tdS='padding:4px 8px;font-size:11px;border:1px solid #333;text-align:center;white-space:nowrap;background:#000;color:#cbd5e1';
   var stickyA='position:sticky;left:0;z-index:1;';
   var h='<div class="hc">';
   h+='<table class="ht" style="min-width:max-content"><thead><tr>';
-  h+='<th style="'+thS+';'+stickyA+'background:#e8e8e8;min-width:52px">'+t('line')+'</th>';
-  h+='<th style="'+thS+';background:#e8e8e8;min-width:70px">'+t('accum')+'</th>';
+  h+='<th style="'+thS+';'+stickyA+'background:#1a1a1a;min-width:52px">'+t('line')+'</th>';
+  h+='<th style="'+thS+';background:#1a1a1a;min-width:70px">'+t('accum')+'</th>';
   dates.forEach(function(dt){var d=new Date(dt+'T00:00:00');h+='<th style="'+thS+'">'+(d.getMonth()+1)+'/'+(d.getDate())+'</th>';});
   h+='</tr></thead><tbody>';
   all.forEach(function(ln){
@@ -2044,7 +2053,7 @@ function buildLossDaily(){
     var lc=LOSS_LINE_COLORS[ln]||'#94a3b8';
     var rowBg=isT?'background:#1a1a1a;':'';
     h+='<tr style="'+rowBg+'">';
-    h+='<td style="'+tdS+';'+stickyA+'background:'+(isT?'#d0d0d0':'#e8e8e8')+';color:'+(isT?'#1a1a1a':lc)+';font-weight:700;min-width:52px">'+ln+'</td>';
+    h+='<td style="'+tdS+';'+stickyA+'background:'+(isT?'#1a1a1a':'#111')+';color:'+(isT?'#e2e8f0':lc)+';font-weight:700;min-width:52px">'+ln+' Line</td>';
     var accum=accumVals[ln];
     h+='<td style="'+tdS+';'+getHmStyle(accum,getLossMx(ln,'_accum'),'loss')+';font-weight:700;min-width:70px">'+fmtLoss(accum)+'</td>';
     dates.forEach(function(dt){
@@ -2054,8 +2063,8 @@ function buildLossDaily(){
     h+='</tr>';
   });
   // 목표행
-  h+='<tr><td style="'+tdS+';'+stickyA+'background:#e8e8e8;color:#e65523;font-weight:700;min-width:52px">'+t('target')+'</td>';
-  h+='<td style="'+tdS+';background:#e8e8e8;color:#e65523;font-weight:700;min-width:70px">6.00%</td>';
+  h+='<tr><td style="'+tdS+';'+stickyA+'background:#1a1a1a;color:#e65523;font-weight:700;min-width:52px">'+t('target')+'</td>';
+  h+='<td style="'+tdS+';background:#1a1a1a;color:#e65523;font-weight:700;min-width:70px">6.00%</td>';
   dates.forEach(function(){h+='<td style="'+tdS+';color:#e65523">6.00%</td>';});
   h+='</tr></tbody></table></div>';
   if(_buildLossDailyTableOnly)return h;
@@ -2078,12 +2087,12 @@ function buildLossDetail(){
   var dateData=D.lossDetailByDateEq[_lossDate]||{};
   var eqList=Object.keys(dateData).filter(function(eq){var d=dateData[eq];return d.prod>0||d.larr.some(function(v){return v>0;});}).sort();
   if(!eqList.length)return h+'<div style="color:#94a3b8;padding:20px">'+t('selDateLine')+'</div>';
-  var thS='background:#e8e8e8;color:#333;padding:5px 8px;font-size:11px;border:1px solid #c0c0c0;white-space:nowrap;text-align:center';
-  var tdS='padding:4px 8px;font-size:11px;border:1px solid #c0c0c0;text-align:center;white-space:nowrap;background:#fff;color:#333';
+  var thS='background:#1a1a1a;color:#e2e8f0;padding:5px 8px;font-size:11px;border:1px solid #333;white-space:nowrap;text-align:center';
+  var tdS='padding:4px 8px;font-size:11px;border:1px solid #333;text-align:center;white-space:nowrap;background:#000;color:#cbd5e1';
   var stkL='position:sticky;left:0;z-index:1;';
   h+='<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">';
   h+='<table style="border-collapse:collapse;min-width:max-content"><thead><tr>';
-  h+='<th style="'+thS+';'+stkL+'background:#e8e8e8;min-width:56px">'+t('equip')+'</th>';
+  h+='<th style="'+thS+';'+stkL+'background:#1a1a1a;min-width:56px">'+t('equip')+'</th>';
   h+='<th style="'+thS+'">'+t('plan')+'</th><th style="'+thS+'">'+t('prod')+'</th><th style="'+thS+'">'+t('utilRate')+'</th><th style="'+thS+'">'+t('lossRate')+'</th>';
   var _hdr=t('lossDetailHdr');
   var _nCols=_hdr.length;
@@ -2116,7 +2125,7 @@ function buildLossDetail(){
     var util=capa>0?prod/capa:0;
     var ev=eqVals[eq];
     totProd+=prod;totCapa+=capa;
-    h+='<tr><td style="'+tdS+';'+stkL+'background:#e8e8e8;color:#1a6cb5;font-weight:700;min-width:56px">'+eq+'</td>';
+    h+='<tr><td style="'+tdS+';'+stkL+'background:#1a1a1a;color:#1a6cb5;font-weight:700;min-width:56px">'+eq+'</td>';
     h+='<td style="'+tdS+'">'+capa.toLocaleString()+'</td>';
     h+='<td style="'+tdS+'">'+Math.round(prod).toLocaleString()+'</td>';
     h+='<td style="'+tdS+';color:'+(util>=0.9?'#22c55e':util>=0.7?'#f59e0b':'#ef4444')+'">'+( util>0?(util*100).toFixed(1)+'%':'-')+'</td>';
@@ -2452,7 +2461,7 @@ function buildInspPage(){
   dates.slice().reverse().forEach(function(d){h+='<option value="'+d+'"'+(d===lastDate?' selected':'')+'>'+d+'</option>';});
   h+='</select></span></h3>';
   h+='<table class="sum-tbl" style="font-size:12px"><thead><tr><th></th><th style="color:#60a5fa">'+t('total')+'</th>';
-  lines.forEach(function(ln){h+='<th style="color:'+lineColors[ln]+'">'+ln+'</th>';});
+  lines.forEach(function(ln){h+='<th style="color:'+lineColors[ln]+'">'+ln+' Line</th>';});
   h+='</tr></thead><tbody>';
   var all=getInspSum([lastDate],null);
   h+='<tr><td style="font-size:10px;color:#94a3b8">'+t('inspDefW')+'</td>';
@@ -2698,10 +2707,10 @@ function showTechPopup(date,eq){
   h+='<h3 style="color:#60a5fa;font-size:15px">'+eq+' '+t('lossDetailHdr')[9]+' ('+date+')</h3>';
   h+='<span style="color:#94a3b8;cursor:pointer;font-size:20px;padding:4px 8px" onclick="document.getElementById(\'techPopup\').remove()">✕</span></div>';
   h+='<table style="border-collapse:collapse;width:100%;font-size:12px">';
-  h+='<tr><th style="background:#e8e8e8;color:#333;padding:6px 8px;border:1px solid #c0c0c0;text-align:left">'+t('equip')+'</th>';
-  h+='<th style="background:#e8e8e8;color:#333;padding:6px 8px;border:1px solid #c0c0c0;text-align:center">'+t('sheet')+'</th>';
-  h+='<th style="background:#e8e8e8;color:#333;padding:6px 8px;border:1px solid #c0c0c0;text-align:center">'+t('qty')+'</th>';
-  h+='<th style="background:#e8e8e8;color:#333;padding:6px 8px;border:1px solid #c0c0c0;text-align:left">'+t('content')+'</th></tr>';
+  h+='<tr><th style="background:#1a1a1a;color:#e2e8f0;padding:6px 8px;border:1px solid #333;text-align:left">'+t('equip')+'</th>';
+  h+='<th style="background:#1a1a1a;color:#e2e8f0;padding:6px 8px;border:1px solid #333;text-align:center">'+t('sheet')+'</th>';
+  h+='<th style="background:#1a1a1a;color:#e2e8f0;padding:6px 8px;border:1px solid #333;text-align:center">'+t('qty')+'</th>';
+  h+='<th style="background:#1a1a1a;color:#e2e8f0;padding:6px 8px;border:1px solid #333;text-align:left">'+t('content')+'</th></tr>';
   dd.techNotes.forEach(function(n){
     h+='<tr><td style="padding:5px 8px;border:1px solid #2a2a2a;color:#93c5fd">'+n.eq+'</td>';
     h+='<td style="padding:5px 8px;border:1px solid #2a2a2a;color:#94a3b8;text-align:center">'+n.sheet+'</td>';
