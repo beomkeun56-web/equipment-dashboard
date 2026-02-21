@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>현황 v12.5</title>
+<title>현황 v12.6</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -90,7 +90,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 현황 v12.5</h1>
+<h1>📊 현황 v12.6</h1>
 <div style="position:absolute;top:12px;right:20px;display:flex;gap:4px;align-items:center">
 <label class="file-btn" for="fileInput" id="fileBtnLabel" style="min-width:56px">파일선택</label>
 <button id="clearBtn" class="hd-btn" style="display:none" onclick="clearData()">초기화</button>
@@ -424,7 +424,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='12.5'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='12.6'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -1555,16 +1555,28 @@ function buildOverviewPage(){
   _buildLossDailyTableOnly=true;h+=buildLossDaily();_buildLossDailyTableOnly=false;
   h+='</div>';
 
-  // --- 2) Loss 그래프 (세로 축소) ---
-  h+='<div class="bx"><h3>'+t('lossDaily')+' '+t('lossRate')+'</h3>';
+  // --- 2) Loss 그래프 ---
+  h+='<div class="bx"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('lossDaily')+' '+t('lossRate');
+  h+='<span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;font-size:9px;font-weight:400">';
+  ['K1','K2','G','H','E','Total'].forEach(function(ln){h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:3px;background:'+LOSS_LINE_COLORS[ln]+'"></span>'+ln+'</span>';});
+  h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #f59e0b"></span>'+t('target')+'6%</span>';
+  h+='</span></h3>';
   h+='<canvas id="ovLossChart"></canvas></div>';
 
   // --- 3) Total 가동율 그래프 (클릭→가동율탭) ---
-  h+='<div class="bx" style="cursor:pointer" onclick="go(2)"><h3>Total '+t('utilTitle')+' <em style="color:#94a3b8;font-size:10px">▶ '+t('tabUtil')+'</em></h3>';
+  h+='<div class="bx" style="cursor:pointer" onclick="go(2)"><h3 style="display:flex;align-items:center;flex-wrap:wrap">Total '+t('utilTitle')+' <em style="color:#94a3b8;font-size:10px">▶ '+t('tabUtil')+'</em>';
+  h+='<span style="margin-left:auto;display:flex;gap:6px;font-size:9px;font-weight:400">';
+  h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:3px;background:#f87171"></span>'+t('utilRate')+'</span>';
+  h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #f59e0b"></span>'+t('utilTarget')+'90%</span>';
+  h+='</span></h3>';
   h+='<canvas id="ovUtilChart"></canvas></div>';
 
   // --- 3.5) 전체 일자별 정지시간/불량수량 그래프 (클릭→정지시간탭) ---
-  h+='<div class="bx" style="cursor:pointer" onclick="go(3)"><h3>'+t('allDaily')+' <em style="color:#94a3b8;font-size:10px">▶ '+t('tabDaily')+'</em></h3>';
+  h+='<div class="bx" style="cursor:pointer" onclick="go(3)"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('allDaily')+' <em style="color:#94a3b8;font-size:10px">▶ '+t('tabDaily')+'</em>';
+  h+='<span style="margin-left:auto;display:flex;gap:6px;font-size:9px;font-weight:400">';
+  h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:8px;background:#3b82f6B3;border-radius:2px"></span>'+t('dailyTimeMin')+'</span>';
+  h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:3px;background:#ef4444"></span>'+t('defect')+'</span>';
+  h+='</span></h3>';
   h+='<canvas id="ovDailyChart"></canvas></div>';
 
   // --- 4~6) 정지시간 KPI + TOP3 + Worst5 (buildSummaryPage 로직) ---
@@ -1673,7 +1685,13 @@ function buildOverviewPage(){
     h+='</tr></tbody></table></div>';
 
     // 8) 완전치수불량 그래프
-    h+='<div class="bx"><h3>'+t('inspDefChart')+' <em>K1·K2·G='+t('fullDef')+', H='+t('dimDef')+'</em></h3>';
+    h+='<div class="bx"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('inspDefChart');
+    h+='<span style="margin-left:auto;display:flex;gap:6px;font-size:9px;font-weight:400">';
+    h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:3px;background:#3b82f6"></span>K1</span>';
+    h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:3px;background:#8b5cf6"></span>K2</span>';
+    h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:3px;background:#06b6d4"></span>G</span>';
+    h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:3px;background:#22c55e"></span>H</span>';
+    h+='</span></h3>';
     h+='<canvas id="ovInspChart" style="max-height:200px"></canvas></div>';
 
     // 9) 완전치수 일자별 % 표
@@ -1723,7 +1741,7 @@ function initOverviewLossChart(){
   datasets.push({label:'Total',data:dates.map(function(dt){var tp=0,tl=0;lines.forEach(function(l){var dd=D.lossByLineDate[dt]&&D.lossByLineDate[dt][l];if(dd){tp+=dd.p;tl+=dd.p*dd.r;}});return tp>0?Math.round(tl/tp*10000)/100:null;}),borderColor:LOSS_LINE_COLORS.Total,backgroundColor:'transparent',pointRadius:2,tension:0.3,spanGaps:true,borderWidth:2});
   datasets.push({label:t('target')+'(6%)',data:dates.map(function(){return 6;}),borderColor:'#f59e0b',borderDash:[5,5],pointRadius:0,tension:0});
   var ch=new Chart(canvas,{type:'line',data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),datasets:datasets},
-    options:{responsive:true,maintainAspectRatio:true,aspectRatio:2.5,plugins:{legend:{position:'right',labels:{color:'#94a3b8',font:{size:9},boxWidth:10,padding:6}}},
+    options:{responsive:true,maintainAspectRatio:true,aspectRatio:2.5,plugins:{legend:{display:false}},
       scales:{x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'#1f2937'}},y:{ticks:{color:'#94a3b8',font:{size:9},callback:function(v){return v+'%'}},grid:{color:'#1f2937'},min:0}}}});
   charts.push(ch);
 }
@@ -1735,7 +1753,7 @@ function initOverviewUtilChart(){
   var _lp={id:'ovUtilLbl',afterDatasetsDraw:function(chart){var ds=chart.data.datasets[0];if(!ds)return;var meta=chart.getDatasetMeta(0);var ctx=chart.ctx;ctx.save();ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';meta.data.forEach(function(pt,i){var v=ds.data[i];if(v==null)return;ctx.fillStyle='#f87171';ctx.fillText(Math.round(v)+'%',pt.x,pt.y-5);});ctx.restore();}};
   var ch=new Chart(canvas,{type:'line',plugins:[_lp],data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),
     datasets:[{label:'Total '+t('utilRate'),data:data,borderColor:'#f87171',backgroundColor:'#f8717120',pointRadius:3,tension:0.3,fill:true,spanGaps:true},{label:t('utilTarget')+'(90%)',data:dates.map(function(){return 90;}),borderColor:'#f59e0b',borderDash:[5,5],pointRadius:0,tension:0}]},
-    options:{responsive:true,maintainAspectRatio:true,aspectRatio:2.5,plugins:{legend:{position:'right',labels:{color:'#94a3b8',font:{size:9},boxWidth:10,padding:6}}},
+    options:{responsive:true,maintainAspectRatio:true,aspectRatio:2.5,plugins:{legend:{display:false}},
       scales:{x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'#1f2937'}},y:{ticks:{color:'#94a3b8',font:{size:9},callback:function(v){return v+'%'}},grid:{color:'#1f2937'},min:50,max:110}}}});
   charts.push(ch);
 }
@@ -1746,7 +1764,7 @@ function initOverviewInspChart(){
   var cfgs=[{ln:'K1',key:'cd',label:'K1 '+t('fullDef'),color:'#3b82f6'},{ln:'K2',key:'cd',label:'K2 '+t('fullDef'),color:'#8b5cf6'},{ln:'G',key:'cd',label:'G '+t('fullDef'),color:'#06b6d4'},{ln:'H',key:'dd',label:'H '+t('dimDef'),color:'#22c55e'}];
   var datasets=cfgs.map(function(cfg){return{label:cfg.label,data:dates.map(function(dt){var d=D.lossByLineDate[dt]&&D.lossByLineDate[dt][cfg.ln];if(!d||!d.p||d.p<=0)return null;var v=d[cfg.key];return v>0?Math.round(v/d.p*10000)/100:null;}),borderColor:cfg.color,backgroundColor:'transparent',pointRadius:2,tension:0.3,spanGaps:true,borderWidth:1.5};});
   var ch=new Chart(canvas,{type:'line',data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),datasets:datasets},
-    options:{responsive:true,maintainAspectRatio:true,aspectRatio:2.5,plugins:{legend:{position:'right',labels:{color:'#94a3b8',font:{size:9},boxWidth:10,padding:6}}},
+    options:{responsive:true,maintainAspectRatio:true,aspectRatio:2.5,plugins:{legend:{display:false}},
       scales:{x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'#1f2937'}},y:{ticks:{color:'#94a3b8',font:{size:9},callback:function(v){return v+'%'}},grid:{color:'#1f2937'},min:0}}}});
   charts.push(ch);
 }
@@ -1758,7 +1776,7 @@ function initOverviewDailyChart(){
   var fixedTime=Math.ceil(maxTime*1.1/10)*10||100;
   var ch=makeDailyChart('ovDailyChart',D.daily,'Total','#3b82f6',null,exceeded?fixedTime:null,exceeded?fixedQty:null);
   // Override aspectRatio to match other overview charts
-  if(ch&&ch.options){ch.options.aspectRatio=2.5;ch.options.maintainAspectRatio=true;if(ch.options.plugins&&ch.options.plugins.legend){ch.options.plugins.legend.position='right';ch.options.plugins.legend.labels={color:'#94a3b8',font:{size:9},boxWidth:10,padding:6};}ch.update();}
+  if(ch&&ch.options){ch.options.aspectRatio=2.5;ch.options.maintainAspectRatio=true;if(ch.options.plugins)ch.options.plugins.legend={display:false};ch.update();}
 }
 // ===================== 요약 끝 =====================
 
