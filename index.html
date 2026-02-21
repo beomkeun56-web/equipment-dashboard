@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Production Performance v11.1</title>
+<title>Production Performance v11.2</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -86,7 +86,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v11.1</h1>
+<h1>📊 Production Performance v11.2</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -417,7 +417,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='11.1'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='11.2'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -545,15 +545,22 @@ function processWorkbook(wb){
       }
       // allRows: PM调整 행만
       var cat=(r[13]||'').toString().trim();
+      var _sub14=(r[14]||'').toString().trim();
+      var _def18=parseFloat(r[18])||0;
+      // 디버그: 2/13 K라인 검사기 필터 추적
+      if(dateStr==='2026-02-13'&&eq[0]==='K'&&_sub14==='检查机'){
+        var _st11=parseFloat(r[11])||0,_st12=parseFloat(r[12])||0;
+        console.log('[검사기필터]',eq,'cat='+cat,'def='+_def18,'time='+Math.max(_st11,_st12),'stop='+_stopYN, cat!=='PM调整'?'→제외(cat)':Math.max(_st11,_st12)>1000?'→제외(time>1000)':'→포함');
+      }
       if(cat!=='PM调整')continue;
-      var sub=(r[14]||'').toString().trim();
+      var sub=_sub14;
       if(sub==='停机'||sub==='开机'||!sub)continue;
       var dtParts=dateStr.split('-');
       var ds=dtParts[1]+'/'+dtParts[2];
       var stopTime=parseFloat(r[11])||0, nonStopTime=parseFloat(r[12])||0;
       var time=Math.max(stopTime,nonStopTime);
       if(time>1000)continue;
-      var defect=parseFloat(r[18])||0;
+      var defect=_def18;
       var kpiTime=(_stopYN==='停')?(typeof r[20]==='number'?r[20]:(parseFloat(r[20])||0)):0;
       var line=eq[0];
       var detail=(r[15]||'').toString().trim();
