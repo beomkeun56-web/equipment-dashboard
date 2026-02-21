@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>현황 v12.4</title>
+<title>현황 v12.5</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -90,7 +90,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 현황 v12.4</h1>
+<h1>📊 현황 v12.5</h1>
 <div style="position:absolute;top:12px;right:20px;display:flex;gap:4px;align-items:center">
 <label class="file-btn" for="fileInput" id="fileBtnLabel" style="min-width:56px">파일선택</label>
 <button id="clearBtn" class="hd-btn" style="display:none" onclick="clearData()">초기화</button>
@@ -424,7 +424,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='12.4'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='12.5'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -995,7 +995,7 @@ function refreshPage(page){
     if(st2)st2.innerHTML=buildHmSettings('stop');
   } else if(page==='loss'){
     var lp=document.getElementById('lossPanel');
-    if(lp){lp.innerHTML=buildLossPage();if(_lossSubView==='daily')initLossChart();}
+    if(lp){lp.innerHTML=buildLossPage();}
   }
 }
 
@@ -1518,7 +1518,7 @@ function renderWorstWeekChart(){
 // ===================== LOSS 요약 =====================
 var LOSS_LINE_COLORS={K1:'#3b82f6',K2:'#8b5cf6',G:'#06b6d4',H:'#22c55e',E:'#f59e0b',Total:'#f87171'};
 var LOSS_DETAIL_HDR=t('lossDetailHdr');
-var _lossSubView='daily',_lossDate='',_lossLine='K1';
+var _lossSubView='detail',_lossDate='',_lossLine='K1';
 var LOSS_TARGET=0.06;
 
 function eqToLine(eq){
@@ -1723,7 +1723,7 @@ function initOverviewLossChart(){
   datasets.push({label:'Total',data:dates.map(function(dt){var tp=0,tl=0;lines.forEach(function(l){var dd=D.lossByLineDate[dt]&&D.lossByLineDate[dt][l];if(dd){tp+=dd.p;tl+=dd.p*dd.r;}});return tp>0?Math.round(tl/tp*10000)/100:null;}),borderColor:LOSS_LINE_COLORS.Total,backgroundColor:'transparent',pointRadius:2,tension:0.3,spanGaps:true,borderWidth:2});
   datasets.push({label:t('target')+'(6%)',data:dates.map(function(){return 6;}),borderColor:'#f59e0b',borderDash:[5,5],pointRadius:0,tension:0});
   var ch=new Chart(canvas,{type:'line',data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),datasets:datasets},
-    options:{responsive:true,maintainAspectRatio:true,aspectRatio:4,plugins:{legend:{labels:{color:'#94a3b8',font:{size:9}}}},
+    options:{responsive:true,maintainAspectRatio:true,aspectRatio:2.5,plugins:{legend:{position:'right',labels:{color:'#94a3b8',font:{size:9},boxWidth:10,padding:6}}},
       scales:{x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'#1f2937'}},y:{ticks:{color:'#94a3b8',font:{size:9},callback:function(v){return v+'%'}},grid:{color:'#1f2937'},min:0}}}});
   charts.push(ch);
 }
@@ -1735,7 +1735,7 @@ function initOverviewUtilChart(){
   var _lp={id:'ovUtilLbl',afterDatasetsDraw:function(chart){var ds=chart.data.datasets[0];if(!ds)return;var meta=chart.getDatasetMeta(0);var ctx=chart.ctx;ctx.save();ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';meta.data.forEach(function(pt,i){var v=ds.data[i];if(v==null)return;ctx.fillStyle='#f87171';ctx.fillText(Math.round(v)+'%',pt.x,pt.y-5);});ctx.restore();}};
   var ch=new Chart(canvas,{type:'line',plugins:[_lp],data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),
     datasets:[{label:'Total '+t('utilRate'),data:data,borderColor:'#f87171',backgroundColor:'#f8717120',pointRadius:3,tension:0.3,fill:true,spanGaps:true},{label:t('utilTarget')+'(90%)',data:dates.map(function(){return 90;}),borderColor:'#f59e0b',borderDash:[5,5],pointRadius:0,tension:0}]},
-    options:{responsive:true,maintainAspectRatio:true,aspectRatio:4,plugins:{legend:{labels:{color:'#94a3b8',font:{size:9}}}},
+    options:{responsive:true,maintainAspectRatio:true,aspectRatio:2.5,plugins:{legend:{position:'right',labels:{color:'#94a3b8',font:{size:9},boxWidth:10,padding:6}}},
       scales:{x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'#1f2937'}},y:{ticks:{color:'#94a3b8',font:{size:9},callback:function(v){return v+'%'}},grid:{color:'#1f2937'},min:50,max:110}}}});
   charts.push(ch);
 }
@@ -1746,7 +1746,7 @@ function initOverviewInspChart(){
   var cfgs=[{ln:'K1',key:'cd',label:'K1 '+t('fullDef'),color:'#3b82f6'},{ln:'K2',key:'cd',label:'K2 '+t('fullDef'),color:'#8b5cf6'},{ln:'G',key:'cd',label:'G '+t('fullDef'),color:'#06b6d4'},{ln:'H',key:'dd',label:'H '+t('dimDef'),color:'#22c55e'}];
   var datasets=cfgs.map(function(cfg){return{label:cfg.label,data:dates.map(function(dt){var d=D.lossByLineDate[dt]&&D.lossByLineDate[dt][cfg.ln];if(!d||!d.p||d.p<=0)return null;var v=d[cfg.key];return v>0?Math.round(v/d.p*10000)/100:null;}),borderColor:cfg.color,backgroundColor:'transparent',pointRadius:2,tension:0.3,spanGaps:true,borderWidth:1.5};});
   var ch=new Chart(canvas,{type:'line',data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),datasets:datasets},
-    options:{responsive:true,maintainAspectRatio:true,aspectRatio:4,plugins:{legend:{labels:{color:'#94a3b8',font:{size:9}},position:'bottom'}},
+    options:{responsive:true,maintainAspectRatio:true,aspectRatio:2.5,plugins:{legend:{position:'right',labels:{color:'#94a3b8',font:{size:9},boxWidth:10,padding:6}}},
       scales:{x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'#1f2937'}},y:{ticks:{color:'#94a3b8',font:{size:9},callback:function(v){return v+'%'}},grid:{color:'#1f2937'},min:0}}}});
   charts.push(ch);
 }
@@ -1758,23 +1758,18 @@ function initOverviewDailyChart(){
   var fixedTime=Math.ceil(maxTime*1.1/10)*10||100;
   var ch=makeDailyChart('ovDailyChart',D.daily,'Total','#3b82f6',null,exceeded?fixedTime:null,exceeded?fixedQty:null);
   // Override aspectRatio to match other overview charts
-  if(ch&&ch.options){ch.options.aspectRatio=4;ch.options.maintainAspectRatio=true;ch.update();}
+  if(ch&&ch.options){ch.options.aspectRatio=2.5;ch.options.maintainAspectRatio=true;if(ch.options.plugins&&ch.options.plugins.legend){ch.options.plugins.legend.position='right';ch.options.plugins.legend.labels={color:'#94a3b8',font:{size:9},boxWidth:10,padding:6};}ch.update();}
 }
 // ===================== 요약 끝 =====================
 
 function buildLossPage(){
   if(!D)return'<div style="padding:20px;color:#94a3b8">'+t('noData')+'</div>';
-  var bs='padding:7px 18px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid #2a2a2a';
-  var on=';background:#3b82f6;color:#fff;border-color:#3b82f6';
-  var off=';background:#1a1a1a;color:#94a3b8';
-  var h='<div class="bx"><h3>📉 '+t('lossTitle')+'</h3>';
+  var h='<div class="bx"><h3>📉 '+t('lossTitle')+' - '+t('lossDetail')+'</h3>';
   h+='<div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap">';
-  h+='<button style="'+bs+(_lossSubView==='daily'?on:off)+'" onclick="renderLoss(\'daily\')">📊 '+t('lossDaily')+'</button>';
-  h+='<button style="'+bs+(_lossSubView==='detail'?on:off)+'" onclick="renderLoss(\'detail\')">🔍 '+t('lossDetail')+'</button>';
   h+='<span style="margin-left:auto;display:flex;gap:6px;align-items:center">'+buildHmSettings('loss')+'</span>';
   h+='</div>';
   h+=buildHmLegend('loss');
-  h+=(_lossSubView==='daily'?buildLossDaily():buildLossDetail());
+  h+=buildLossDetail();
   h+='</div>';
   return h;
 }
@@ -1937,9 +1932,9 @@ function buildLossDetail(){
 }
 
 function renderLoss(subView){
-  _lossSubView=subView||'daily';
+  _lossSubView='detail';
   var panel=document.getElementById('lossPanel');
-  if(panel){panel.innerHTML=buildLossPage();if(_lossSubView==='daily')initLossChart();
+  if(panel){panel.innerHTML=buildLossPage();
     setTimeout(function(){panel.querySelectorAll('.hc').forEach(function(el){el.scrollLeft=el.scrollWidth;});},50);}
 }
 function setLossDetail(val,field){
@@ -2100,7 +2095,6 @@ function renderAll(){
   (D.allRows||[]).forEach(function(rh){if(rh.stop){var k=rh.eq+'|'+rh.ds;_htStop[k]=(_htStop[k]||0)+rh.time}});
   var _hmTimeFiltered=[];for(var _tk in _htStop){var _sp=_tk.split('|');_hmTimeFiltered.push({설비호:_sp[0],일자str:_sp[1],time:_htStop[_tk]})}
   document.getElementById('hm_time').innerHTML=buildDailyHT(_hmTimeFiltered,'time',D.eq_order,D.all_dates,true,'stop');
-  initLossChart();
   initUtilCharts();
   // 요약 페이지 차트 초기화
   initOverviewLossChart();
