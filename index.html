@@ -6,12 +6,13 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>현황 v11.7</title>
+<title>현황 v11.8</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'넥슨Lv2고딕','NEXON Lv2 Gothic',sans-serif}
 body{font-family:'넥슨Lv2고딕','NEXON Lv2 Gothic',sans-serif;background:#000;color:#e2e8f0}
 .hd{background:linear-gradient(135deg,#0a0a0a,#1a1a1a);padding:16px 20px;border-bottom:2px solid #3b82f6}
 .hd h1{font-size:20px;color:#ffffff}.hd .ver{font-size:11px;color:#94a3b8;font-weight:400;margin-left:6px}.hd p{font-size:10px;color:#94a3b8;margin-top:4px}
@@ -89,7 +90,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 현황 v11.7</h1>
+<h1>📊 현황 v11.8</h1>
 <div style="position:absolute;top:12px;right:20px;display:flex;gap:4px;align-items:center">
 <label class="file-btn" for="fileInput" id="fileBtnLabel" style="min-width:56px">파일선택</label>
 <button id="clearBtn" class="hd-btn" style="display:none" onclick="clearData()">초기화</button>
@@ -116,6 +117,8 @@ PM调整 데이터를 자동 분석합니다</p>
 </div>
 
 <script>
+var _nxFont="'넥슨Lv2고딕','NEXON Lv2 Gothic',sans-serif";
+Chart.defaults.font.family=_nxFont;
 let D=null, charts=[];
 var LANG=localStorage.getItem('dashLang')||'ko';
 var I={
@@ -419,7 +422,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='11.7'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='11.8'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
