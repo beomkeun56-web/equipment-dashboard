@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Production Performance v8.8</title>
+<title>Production Performance v8.9</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -58,11 +58,6 @@ table.ht thead th{position:sticky;top:0;z-index:2}
 table.ht tbody th,table.ht thead th:first-child{position:sticky;left:0;z-index:3;background:#1a1a1a}
 table.ht thead th:first-child{z-index:4}
 .h0{background:transparent}
-.h1{background:rgba(239,68,68,0.1);color:#f9a8a8}
-.h2{background:rgba(239,68,68,0.25);color:#fca5a5}
-.h3{background:rgba(239,68,68,0.45);color:#fecaca}
-.h4{background:rgba(239,68,68,0.65);color:#fff;font-weight:700}
-.h5{background:rgba(220,38,38,0.9);color:#fff;font-weight:700}
 .lg{display:flex;gap:8px;align-items:center;margin:6px 0;font-size:10px;flex-wrap:wrap}
 .li{display:flex;align-items:center;gap:3px}.lc{width:16px;height:10px;border-radius:2px}
 .loading{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:999;justify-content:center;align-items:center;font-size:18px;color:#60a5fa}
@@ -90,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v8.8</h1>
+<h1>📊 Production Performance v8.9</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -831,21 +826,115 @@ function processWorkbook(wb){
 }
 
 function go(i){document.querySelectorAll('.pn').forEach(function(p,x){p.classList.toggle('on',x===i)});document.querySelectorAll('.tab').forEach(function(t,x){t.classList.toggle('on',x===i)})}
-function hcl(v,mx){if(!v||v===0)return'h0';var r=v/mx;return r<.15?'h1':r<.35?'h2':r<.6?'h3':r<.8?'h4':'h5'}
+
+// === 히트맵 팔레트 시스템 ===
+var HM_PALETTES={
+  red:[
+    {bg:'rgba(239,68,68,0.08)',c:'#f9a8a8'},{bg:'rgba(239,68,68,0.16)',c:'#f9a8a8'},
+    {bg:'rgba(239,68,68,0.28)',c:'#fca5a5'},{bg:'rgba(239,68,68,0.42)',c:'#fecaca'},
+    {bg:'rgba(239,68,68,0.58)',c:'#fff',fw:1},{bg:'rgba(220,38,38,0.75)',c:'#fff',fw:1},
+    {bg:'rgba(185,28,28,0.92)',c:'#fff',fw:1}
+  ],
+  blue_red:[
+    {bg:'rgba(59,130,246,0.15)',c:'#93c5fd'},{bg:'rgba(59,130,246,0.30)',c:'#93c5fd'},
+    {bg:'rgba(251,191,36,0.30)',c:'#fcd34d'},{bg:'rgba(251,191,36,0.50)',c:'#fcd34d'},
+    {bg:'rgba(239,68,68,0.40)',c:'#fca5a5'},{bg:'rgba(239,68,68,0.60)',c:'#fff',fw:1},
+    {bg:'rgba(220,38,38,0.85)',c:'#fff',fw:1}
+  ],
+  orange_red:[
+    {bg:'rgba(251,146,60,0.10)',c:'#fed7aa'},{bg:'rgba(251,146,60,0.22)',c:'#fed7aa'},
+    {bg:'rgba(249,115,22,0.35)',c:'#fdba74'},{bg:'rgba(249,115,22,0.50)',c:'#fff'},
+    {bg:'rgba(239,68,68,0.50)',c:'#fff',fw:1},{bg:'rgba(239,68,68,0.70)',c:'#fff',fw:1},
+    {bg:'rgba(220,38,38,0.90)',c:'#fff',fw:1}
+  ],
+  green_red:[
+    {bg:'rgba(34,197,94,0.15)',c:'#86efac'},{bg:'rgba(34,197,94,0.30)',c:'#86efac'},
+    {bg:'rgba(250,204,21,0.30)',c:'#fef08a'},{bg:'rgba(250,204,21,0.50)',c:'#fef08a'},
+    {bg:'rgba(239,68,68,0.40)',c:'#fca5a5'},{bg:'rgba(239,68,68,0.60)',c:'#fff',fw:1},
+    {bg:'rgba(220,38,38,0.85)',c:'#fff',fw:1}
+  ],
+  purple:[
+    {bg:'rgba(168,85,247,0.10)',c:'#d8b4fe'},{bg:'rgba(168,85,247,0.20)',c:'#d8b4fe'},
+    {bg:'rgba(168,85,247,0.35)',c:'#e9d5ff'},{bg:'rgba(168,85,247,0.50)',c:'#fff'},
+    {bg:'rgba(147,51,234,0.60)',c:'#fff',fw:1},{bg:'rgba(126,34,206,0.75)',c:'#fff',fw:1},
+    {bg:'rgba(107,33,168,0.92)',c:'#fff',fw:1}
+  ]
+};
+var HM_PALETTE_NAMES={red:'빨강',blue_red:'파랑→빨강',orange_red:'주황→빨강',green_red:'초록→빨강',purple:'보라'};
+var _hmPalette=localStorage.getItem('hmPalette')||'red';
+var _hmAxis=localStorage.getItem('hmAxis')||'all';
+
+function getHmStyle(v,mx){
+  if(!v||v===0)return'';
+  var pal=HM_PALETTES[_hmPalette]||HM_PALETTES.red;
+  var r=v/mx;
+  var idx=r<.08?0:r<.16?1:r<.28?2:r<.42?3:r<.58?4:r<.75?5:6;
+  var s=pal[idx];
+  return'background:'+s.bg+';color:'+s.c+(s.fw?';font-weight:700':'');
+}
+
+function buildHmLegend(){
+  var pal=HM_PALETTES[_hmPalette]||HM_PALETTES.red;
+  var h='<div class="lg"><div class="li"><div class="lc" style="background:#0a0a0a;border:1px solid #1a1a1a"></div>0</div>';
+  for(var i=0;i<7;i++){h+='<div class="li"><div class="lc" style="background:'+pal[i].bg+'"></div>'+(i+1)+'</div>';}
+  return h+'</div>';
+}
+
+function buildHmSettings(){
+  var ss='font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid #333;cursor:pointer;';
+  var h='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0;padding:8px;background:#111;border-radius:8px;border:1px solid #222">';
+  h+='<span style="color:#94a3b8;font-size:11px;font-weight:700">🎨 팔레트</span>';
+  Object.keys(HM_PALETTES).forEach(function(k){
+    var on=k===_hmPalette;
+    h+='<button onclick="setHmPalette(\''+k+'\')" style="'+ss+'background:'+(on?'#3b82f6':'#1a1a1a')+';color:'+(on?'#fff':'#94a3b8')+'">'+(HM_PALETTE_NAMES[k]||k)+'</button>';
+  });
+  h+='<span style="color:#94a3b8;font-size:11px;font-weight:700;margin-left:12px">📐 기준</span>';
+  [{k:'all',l:'전체'},{k:'row',l:'세로(설비별)'},{k:'col',l:'가로(날짜별)'}].forEach(function(o){
+    var on=o.k===_hmAxis;
+    h+='<button onclick="setHmAxis(\''+o.k+'\')" style="'+ss+'background:'+(on?'#3b82f6':'#1a1a1a')+';color:'+(on?'#fff':'#94a3b8')+'">'+o.l+'</button>';
+  });
+  h+='</div>';
+  return h;
+}
+
+function setHmPalette(p){_hmPalette=p;localStorage.setItem('hmPalette',p);refreshHeatmaps();}
+function setHmAxis(a){_hmAxis=a;localStorage.setItem('hmAxis',a);refreshHeatmaps();}
+
+function refreshHeatmaps(){
+  if(!D)return;
+  var defEl=document.getElementById('hm_def');
+  var timeEl=document.getElementById('hm_time');
+  var defSet=document.getElementById('hm_def_settings');
+  var timeSet=document.getElementById('hm_time_settings');
+  if(defEl)defEl.innerHTML=buildDailyHT(D.hm_def,'불량수량',D.eq_order,D.all_dates,false);
+  if(timeEl){
+    var _htStop={};
+    (D.allRows||[]).forEach(function(rh){if(rh.stop){var k=rh.eq+'|'+rh.ds;_htStop[k]=(_htStop[k]||0)+rh.time}});
+    var _hmTF=[];for(var _tk in _htStop){var _sp=_tk.split('|');_hmTF.push({설비호:_sp[0],일자str:_sp[1],time:_htStop[_tk]})}
+    timeEl.innerHTML=buildDailyHT(_hmTF,'time',D.eq_order,D.all_dates,true);
+  }
+  if(defSet)defSet.innerHTML=buildHmSettings()+buildHmLegend();
+  if(timeSet)timeSet.innerHTML=buildHmSettings()+buildHmLegend();
+}
 
 function buildDailyHT(data,vk,equips,dates,isAvg){
   var lk={},mx=0;
   for(var i=0;i<data.length;i++){var r=data[i];var k=r['설비호']+'|'+r['일자str'];var v=r[vk]||0;lk[k]=v;if(v>mx)mx=v}
   var lo={K:0,H:1,G:2};
   var et=equips.map(function(e){return{e:e,t:dates.reduce(function(s,d){return s+(lk[e+'|'+d]||0)},0)}}).sort(function(a,b){var la=lo[a.e[0]]!=null?lo[a.e[0]]:9,lb=lo[b.e[0]]!=null?lo[b.e[0]]:9;if(la!==lb)return la-lb;return b.t-a.t}).map(function(x){return x.e});
+  // 기준별 max 계산
+  var rowMx={},colMx={};
+  if(_hmAxis==='row'){et.forEach(function(eq){var rm=0;dates.forEach(function(d){var v=lk[eq+'|'+d]||0;if(v>rm)rm=v});rowMx[eq]=rm||1})}
+  if(_hmAxis==='col'){dates.forEach(function(d){var cm=0;et.forEach(function(eq){var v=lk[eq+'|'+d]||0;if(v>cm)cm=v});colMx[d]=cm||1})}
+  function getMx(eq,d){if(_hmAxis==='row')return rowMx[eq]||1;if(_hmAxis==='col')return colMx[d]||1;return mx||1}
   var h='<table class="ht"><thead><tr><th>'+t('eqDate')+'</th>';
   dates.forEach(function(d){h+='<th>'+d+'</th>'});
   var sumLabel=isAvg?t('hmAvg'):t('total');
   h+='<th style="background:#1e40af">'+sumLabel+'</th></tr></thead><tbody>';
   var sortField=vk==='time'?'time':'defect';
   et.forEach(function(eq){h+='<tr><th>'+eq+'</th>';var rs=0,rn=0;dates.forEach(function(d){var v=lk[eq+'|'+d]||0;rs+=v;if(v>0)rn++;
-    if(v){h+='<td class="'+hcl(v,mx)+' hm-click" onclick="showDetail(\''+eq+'\',\''+d+'\',\''+sortField+'\')">'+Math.round(v).toLocaleString()+'</td>'}
-    else{h+='<td class="'+hcl(v,mx)+'"></td>'}
+    if(v){h+='<td style="'+getHmStyle(v,getMx(eq,d))+'" class="hm-click" onclick="showDetail(\''+eq+'\',\''+d+'\',\''+sortField+'\')">'+Math.round(v).toLocaleString()+'</td>'}
+    else{h+='<td class="h0"></td>'}
   });var rowVal=isAvg&&rn>0?rs/rn:rs;h+='<td style="background:#1e3a5f;font-weight:700;color:#60a5fa">'+Math.round(rowVal).toLocaleString()+'</td></tr>'});
   h+='<tr><th style="background:#1e40af">'+sumLabel+'</th>';var gt=0,gn=0;
   dates.forEach(function(d){var cs=0,cn=0;et.forEach(function(e){var v=lk[e+'|'+d]||0;cs+=v;if(v>0)cn++;});var colVal=isAvg&&cn>0?cs/cn:cs;gt+=colVal;gn++;h+='<td style="background:#1e3a5f;font-weight:700;color:#60a5fa">'+Math.round(colVal).toLocaleString()+'</td>'});
@@ -933,8 +1022,8 @@ function showEqHeatmap(eq){
   var sumT=0;
   recentDates.forEach(function(d){
     var v=dayTime[d]||0;sumT+=v;
-    var cls=hcl(v,mxT);
-    hm+='<td class="'+cls+'" style="padding:6px 4px;border:1px solid #1a1a1a;text-align:center;font-size:11px;cursor:pointer" onclick="showDetail(\''+eq+'\',\''+d+'\',\'time\')">'+(v?Math.round(v).toLocaleString():'')+'</td>';
+    var sty=v?getHmStyle(v,mxT):'';
+    hm+='<td style="padding:6px 4px;border:1px solid #1a1a1a;text-align:center;font-size:11px;cursor:pointer;'+sty+'" onclick="showDetail(\''+eq+'\',\''+d+'\',\'time\')">'+(v?Math.round(v).toLocaleString():'')+'</td>';
   });
   hm+='<td style="background:#1e3a5f;font-weight:700;color:#60a5fa;padding:6px 4px;border:1px solid #1a1a1a;text-align:center">'+Math.round(sumT).toLocaleString()+'</td></tr>';
 
@@ -943,15 +1032,15 @@ function showEqHeatmap(eq){
   var sumD=0;
   recentDates.forEach(function(d){
     var v=dayDef[d]||0;sumD+=v;
-    var cls=hcl(v,mxD);
-    hm+='<td class="'+cls+'" style="padding:6px 4px;border:1px solid #1a1a1a;text-align:center;font-size:11px;cursor:pointer" onclick="showDetail(\''+eq+'\',\''+d+'\',\'defect\')">'+(v?Math.round(v).toLocaleString():'')+'</td>';
+    var sty=v?getHmStyle(v,mxD):'';
+    hm+='<td style="padding:6px 4px;border:1px solid #1a1a1a;text-align:center;font-size:11px;cursor:pointer;'+sty+'" onclick="showDetail(\''+eq+'\',\''+d+'\',\'defect\')">'+(v?Math.round(v).toLocaleString():'')+'</td>';
   });
   hm+='<td style="background:#1e3a5f;font-weight:700;color:#60a5fa;padding:6px 4px;border:1px solid #1a1a1a;text-align:center">'+Math.round(sumD).toLocaleString()+'</td></tr>';
 
   hm+='</tbody></table></div>';
 
   // Legend
-  hm+='<div class="lg" style="margin-top:8px"><div class="li"><div class="lc" style="background:#0a0a0a;border:1px solid #1a1a1a"></div>0</div><div class="li"><div class="lc" style="background:rgba(59,130,246,0.3)"></div>Low</div><div class="li"><div class="lc" style="background:rgba(251,191,36,0.5)"></div>Mid</div><div class="li"><div class="lc" style="background:rgba(239,68,68,0.7)"></div>High</div></div>';
+  hm+=buildHmLegend();
   hm+='<div style="margin-top:6px;font-size:10px;color:#94a3b8">* '+t('eqHmHelp')+'</div>';
 
   document.getElementById('modalBody').innerHTML=hm;
@@ -1655,7 +1744,6 @@ function renderAll(){
     '<div class="tab" onclick="go(5)">🔥 '+t('tabStopHm')+'</div>'+
     '<div class="tab" onclick="go(6)">⚙ '+t('tabST')+'</div>';
 
-  var legend='<div class="lg"><div class="li"><div class="lc" style="background:#0a0a0a;border:1px solid #1a1a1a"></div>0</div><div class="li"><div class="lc" style="background:rgba(239,68,68,0.1)"></div>1</div><div class="li"><div class="lc" style="background:rgba(239,68,68,0.25)"></div>2</div><div class="li"><div class="lc" style="background:rgba(239,68,68,0.45)"></div>3</div><div class="li"><div class="lc" style="background:rgba(239,68,68,0.65)"></div>4</div><div class="li"><div class="lc" style="background:rgba(220,38,38,0.9)"></div>5</div></div>';
 
   document.getElementById('root').innerHTML=
   '<div class="pn on" id="lossPanel">'+buildLossPage()+'</div>'+
@@ -1674,8 +1762,8 @@ function renderAll(){
     '<div class="bx" style="border-left:3px solid #f59e0b"><h3><span class="line-label" style="background:#f59e0b20;color:#f59e0b">K Line</span> '+t('lineDaily').replace(' Line','')+'<em>'+((ls.K||{}).cnt||0).toLocaleString()+t('items')+' · '+t('equip')+' '+((ls.K||{}).eq||0)+t('eqUnit')+'</em></h3><canvas id="dK"></canvas></div>'+
     '<div class="bx" style="border-left:3px solid #f59e0b"><h3><span class="line-label" style="background:#f59e0b20;color:#f59e0b">K Line</span> '+t('lineStopVs').replace(' Line','')+'</h3><div id="tKS"></div></div>'+
   '</div>'+
-  '<div class="pn"><div class="bx"><h3>🔥 '+t('hmDefTitle')+'</h3>'+legend+'<div class="hc" id="hm_def"></div></div></div>'+
-  '<div class="pn"><div class="bx"><h3>🔥 '+t('hmStopTitle')+'</h3>'+legend+'<div class="hc" id="hm_time"></div></div></div>'+
+  '<div class="pn"><div class="bx"><h3>🔥 '+t('hmDefTitle')+'</h3><div id="hm_def_settings">'+buildHmSettings()+buildHmLegend()+'</div><div class="hc" id="hm_def"></div></div></div>'+
+  '<div class="pn"><div class="bx"><h3>🔥 '+t('hmStopTitle')+'</h3><div id="hm_time_settings">'+buildHmSettings()+buildHmLegend()+'</div><div class="hc" id="hm_time"></div></div></div>'+
   '<div class="pn" id="stAnalysisPanel">'+buildSTAnalysisPage(D.stDates&&D.stDates.length?D.stDates[D.stDates.length-1]:'','daily')+'</div>';
 
   // Render summary chart
