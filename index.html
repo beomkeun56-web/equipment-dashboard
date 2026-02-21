@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>현황 v11.6</title>
+<title>현황 v11.7</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -16,8 +16,11 @@ body{font-family:'넥슨Lv2고딕','NEXON Lv2 Gothic',sans-serif;background:#000
 .hd{background:linear-gradient(135deg,#0a0a0a,#1a1a1a);padding:16px 20px;border-bottom:2px solid #3b82f6}
 .hd h1{font-size:20px;color:#ffffff}.hd .ver{font-size:11px;color:#94a3b8;font-weight:400;margin-left:6px}.hd p{font-size:10px;color:#94a3b8;margin-top:4px}
 .file-bar{background:#000;padding:10px 20px;border-bottom:1px solid #1a1a1a;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.file-btn{background:#3b82f6;color:#fff;padding:8px 16px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;min-height:36px;touch-action:manipulation}
-.file-btn:active{background:#2563eb;transform:scale(0.97)}
+.file-btn{background:#1a1a1a;color:#94a3b8;padding:6px 10px;border:1px solid #2a2a2a;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;min-height:28px;touch-action:manipulation;transition:all .2s}
+.file-btn:hover{background:#2a2a2a;color:#e2e8f0}
+.file-btn:active{transform:scale(0.97)}
+.hd-btn{background:#1a1a1a;color:#94a3b8;padding:6px 10px;border:1px solid #2a2a2a;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;min-width:56px;text-align:center;min-height:28px;touch-action:manipulation;transition:all .2s}
+.hd-btn:hover{background:#2a2a2a;color:#e2e8f0}
 .file-name{font-size:12px;color:#94a3b8;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .file-status{font-size:11px;font-weight:600}
 .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px;padding:10px 20px;background:#0a0a0a}
@@ -86,12 +89,12 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 현황 v11.6</h1>
-<div style="position:absolute;top:10px;right:16px;display:flex;gap:4px;align-items:center">
-<label class="file-btn" for="fileInput" id="fileBtnLabel" style="min-width:62px;text-align:center;padding:5px 8px;font-size:11px;min-height:28px;border-radius:6px">파일선택</label>
-<button id="clearBtn" style="display:none;background:#ef4444;color:#fff;padding:5px 8px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;min-width:62px;text-align:center;touch-action:manipulation;min-height:28px" onclick="clearData()">초기화</button>
-<button onclick="setLang('ko')" style="padding:5px 8px;border-radius:6px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:62px;text-align:center;background:#3b82f6;color:#fff;font-weight:700;min-height:28px" id="langKo">한국어</button>
-<button onclick="setLang('zh')" style="padding:5px 8px;border-radius:6px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:62px;text-align:center;background:#1a1a1a;color:#94a3b8;min-height:28px" id="langZh">中文</button>
+<h1>📊 현황 v11.7</h1>
+<div style="position:absolute;top:12px;right:20px;display:flex;gap:4px;align-items:center">
+<label class="file-btn" for="fileInput" id="fileBtnLabel" style="min-width:56px">파일선택</label>
+<button id="clearBtn" class="hd-btn" style="display:none" onclick="clearData()">초기화</button>
+<button onclick="setLang('ko')" class="hd-btn" id="langKo">한국어</button>
+<button onclick="setLang('zh')" class="hd-btn" id="langZh">中文</button>
 </div>
 <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(this)">
 <span id="fileName" style="display:none"></span><span id="fileStatus" style="display:none"></span>
@@ -403,7 +406,7 @@ inspTimeW:'停机时间'
 };
 function t(k){return(I[LANG]||I.ko)[k]||(I.ko)[k]||k;}
 function setLang(lang){LANG=lang;localStorage.setItem('dashLang',lang);document.documentElement.lang=lang==='zh'?'zh-CN':'ko';updateLangUI();if(D)renderAll();else{updateStaticTexts();}}
-function updateLangUI(){var ko=document.getElementById('langKo'),zh=document.getElementById('langZh');if(ko){ko.style.background=LANG==='ko'?'#3b82f6':'transparent';ko.style.color=LANG==='ko'?'#fff':'#94a3b8';}if(zh){zh.style.background=LANG==='zh'?'#3b82f6':'transparent';zh.style.color=LANG==='zh'?'#fff':'#94a3b8';}updateStaticTexts();}
+function updateLangUI(){var ko=document.getElementById('langKo'),zh=document.getElementById('langZh');if(ko){ko.style.color=LANG==='ko'?'#e2e8f0':'#94a3b8';ko.style.borderColor=LANG==='ko'?'#64748b':'#2a2a2a';}if(zh){zh.style.color=LANG==='zh'?'#e2e8f0':'#94a3b8';zh.style.borderColor=LANG==='zh'?'#64748b':'#2a2a2a';}updateStaticTexts();}
 function updateStaticTexts(){
 var _inf=document.getElementById('info');if(_inf)_inf.textContent='';
 var fn=document.getElementById('fileName');if(fn&&!D)fn.textContent=t('selectFile');
@@ -416,7 +419,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='11.6'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='11.7'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
