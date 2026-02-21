@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Production Performance v11.2</title>
+<title>Production Performance v11.3</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -86,7 +86,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v11.2</h1>
+<h1>📊 Production Performance v11.3</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -417,7 +417,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='11.2'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='11.3'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -501,7 +501,7 @@ function handleFile(input){
 }
 
 function processWorkbook(wb){
-  var allRows=[];
+  var allRows=[],inspAllRows=[];
   var _dbgAllSheets=wb.SheetNames.slice();
   var lossByLineDate={},lossAccumByLine={},lossDates=[];
   var _lossDbg={sheets:[],found:'없음',rows:0,sample:''};
@@ -543,15 +543,18 @@ function processWorkbook(wb){
           kpiStopByDateEq[dateStr][eq]=(kpiStopByDateEq[dateStr][eq]||0)+kpiSm;
         }
       }
-      // allRows: PM调整 행만
+      // 검사기 전용: 모든 大分类의 검사기 행 수집
       var cat=(r[13]||'').toString().trim();
       var _sub14=(r[14]||'').toString().trim();
       var _def18=parseFloat(r[18])||0;
-      // 디버그: 2/13 K라인 검사기 필터 추적
-      if(dateStr==='2026-02-13'&&eq[0]==='K'&&_sub14==='检查机'){
-        var _st11=parseFloat(r[11])||0,_st12=parseFloat(r[12])||0;
-        console.log('[검사기필터]',eq,'cat='+cat,'def='+_def18,'time='+Math.max(_st11,_st12),'stop='+_stopYN, cat!=='PM调整'?'→제외(cat)':Math.max(_st11,_st12)>1000?'→제외(time>1000)':'→포함');
+      if(_sub14==='检查机'){
+        var _dtP=dateStr.split('-');
+        var _ds2=_dtP[1]+'/'+_dtP[2];
+        var _kpiT2=(_stopYN==='停')?(typeof r[20]==='number'?r[20]:(parseFloat(r[20])||0)):0;
+        var _detail2=(r[15]||'').toString().trim();
+        inspAllRows.push({ds:_ds2,eq:eq,cat:cat,sub:_sub14,detail:_detail2,defect:_def18,kpiTime:_kpiT2,stop:_stopYN==='停',line:eq[0],dateStr:dateStr});
       }
+      // allRows: PM调整 행만
       if(cat!=='PM调整')continue;
       var sub=_sub14;
       if(sub==='停机'||sub==='开机'||!sub)continue;
@@ -882,7 +885,7 @@ function processWorkbook(wb){
   return {
     daily:daily,daily_G:daily_G,daily_H:daily_H,daily_K:daily_K,
     all_dates:all_dates,eq_order:eq_order,line_equips:line_equips,
-    hm_def:hm_def,hm_time:hm_time,allRows:allRows,
+    hm_def:hm_def,hm_time:hm_time,allRows:allRows,inspAllRows:inspAllRows,
     totalRec:allRows.length,totalDef:Math.round(allRows.reduce(function(s,r){return s+r.defect},0)),
     totalTime:Math.round(allRows.reduce(function(s,r){return s+r.time},0)),
     stopCnt:allRows.filter(function(r){return r.stop}).length,
@@ -1988,8 +1991,8 @@ function buildInspPage(){
   h+='</select></span></h3>';
   h+='<canvas id="inspDefChart"></canvas></div>';
 
-  // === Section 2: 검사기 조정 현황 KPI ===
-  var inspRows=(D.allRows||[]).filter(function(r){return r.sub==='检查机';});
+  // === Section 2: 검사기 조정 현황 KPI (inspAllRows: 모든 大分类) ===
+  var inspRows=D.inspAllRows||[];
   var lines=['K','G','H'];
   var lineColors={K:'#f59e0b',G:'#06b6d4',H:'#22c55e'};
   function getInspSum(dts,line){
@@ -2007,16 +2010,16 @@ function buildInspPage(){
   h+='</tr><tr><th></th>';
   for(var ci=0;ci<4;ci++){h+='<th style="font-size:10px;color:#94a3b8">'+t('inspDefW')+'</th><th style="font-size:10px;color:#94a3b8">'+t('inspTimeW')+'</th>';}
   h+='</tr></thead><tbody>';
-  var periods=[{label:t('prevDay'),dts:[lastDate]},{label:t('weekly'),dts:weekDates},{label:t('monthly'),dts:monthDates}];
+  var periods=[{label:t('prevDay'),dts:[lastDate],pk:'prev'},{label:t('weekly'),dts:weekDates,pk:'week'},{label:t('monthly'),dts:monthDates,pk:'month'}];
   periods.forEach(function(p){
     var all=getInspSum(p.dts,null);
     h+='<tr><th>'+p.label+'</th>';
-    h+='<td style="color:#ef4444;font-weight:700">'+all.def.toLocaleString()+'</td>';
-    h+='<td style="color:#60a5fa;font-weight:700">'+all.time.toLocaleString()+t('min')+'</td>';
+    h+='<td style="color:#ef4444;font-weight:700;cursor:pointer;text-decoration:underline" onclick="showInspDetail(\''+p.pk+'\',null)">'+all.def.toLocaleString()+'</td>';
+    h+='<td style="color:#60a5fa;font-weight:700;cursor:pointer;text-decoration:underline" onclick="showInspDetail(\''+p.pk+'\',null)">'+all.time.toLocaleString()+t('min')+'</td>';
     lines.forEach(function(ln){
       var v=getInspSum(p.dts,ln);
-      h+='<td style="color:#ef4444">'+v.def.toLocaleString()+'</td>';
-      h+='<td style="color:#60a5fa">'+v.time.toLocaleString()+t('min')+'</td>';
+      h+='<td style="color:#ef4444;cursor:pointer;text-decoration:underline" onclick="showInspDetail(\''+p.pk+'\',\''+ln+'\')">'+v.def.toLocaleString()+'</td>';
+      h+='<td style="color:#60a5fa;cursor:pointer;text-decoration:underline" onclick="showInspDetail(\''+p.pk+'\',\''+ln+'\')">'+v.time.toLocaleString()+t('min')+'</td>';
     });
     h+='</tr>';
   });
@@ -2040,7 +2043,7 @@ function buildInspPage(){
   if(!inspDefList.length)h+='<tr><td colspan="5" style="color:#94a3b8">'+t('noData')+'</td></tr>';
   h+='</tbody></table></div>';
 
-  // 3-2: 검사기 불량수/정지시간 Worst 5 (이번주, 설비별)
+  // 3-2: 검사기 불량수/정지시간 Worst 5 (이번주, 설비별, inspAllRows)
   var eqMap={};
   weekDates.forEach(function(ds){
     inspRows.forEach(function(r){
@@ -2053,7 +2056,7 @@ function buildInspPage(){
   h+='<div class="bx"><h4 style="color:#ef4444;margin-bottom:8px">🔧 '+t('inspDefW')+' Worst 5</h4>';
   h+='<table class="worst-tbl"><thead><tr><th>#</th><th>'+t('equip')+'</th><th>'+t('inspDefW')+'</th></tr></thead><tbody>';
   byDef.forEach(function(item,i){
-    h+='<tr><td>'+(i+1)+'</td><td>'+item.eq+'</td><td style="color:#ef4444;font-weight:700">'+Math.round(item.def).toLocaleString()+'</td></tr>';
+    h+='<tr style="cursor:pointer" onclick="showInspEqDetail(\''+item.eq+'\',\'week\')"><td>'+(i+1)+'</td><td>'+item.eq+'</td><td style="color:#ef4444;font-weight:700">'+Math.round(item.def).toLocaleString()+'</td></tr>';
   });
   if(!byDef.length)h+='<tr><td colspan="3" style="color:#94a3b8">'+t('noData')+'</td></tr>';
   h+='</tbody></table></div>';
@@ -2062,12 +2065,65 @@ function buildInspPage(){
   h+='<div class="bx"><h4 style="color:#60a5fa;margin-bottom:8px">⏱ '+t('inspTimeW')+' Worst 5</h4>';
   h+='<table class="worst-tbl"><thead><tr><th>#</th><th>'+t('equip')+'</th><th>'+t('inspTimeW')+'</th></tr></thead><tbody>';
   byTime.forEach(function(item,i){
-    h+='<tr><td>'+(i+1)+'</td><td>'+item.eq+'</td><td style="color:#60a5fa;font-weight:700">'+Math.round(item.time).toLocaleString()+t('min')+'</td></tr>';
+    h+='<tr style="cursor:pointer" onclick="showInspEqDetail(\''+item.eq+'\',\'week\')"><td>'+(i+1)+'</td><td>'+item.eq+'</td><td style="color:#60a5fa;font-weight:700">'+Math.round(item.time).toLocaleString()+t('min')+'</td></tr>';
   });
   if(!byTime.length)h+='<tr><td colspan="3" style="color:#94a3b8">'+t('noData')+'</td></tr>';
   h+='</tbody></table></div>';
 
   return h;
+}
+
+// 검사기 KPI 셀 클릭 팝업: 기간별+라인별 상세
+function showInspDetail(periodKey,line){
+  if(!D||!D.inspAllRows||!D.lossDates)return;
+  var dates=D.lossDates;
+  var lastDate=_inspDate&&dates.indexOf(_inspDate)>=0?_inspDate:dates[dates.length-1];
+  var lastIdx=dates.indexOf(lastDate);
+  var dts;
+  if(periodKey==='prev')dts=[lastDate];
+  else if(periodKey==='week')dts=dates.slice(Math.max(0,lastIdx-6),lastIdx+1);
+  else dts=dates.slice(Math.max(0,lastIdx-29),lastIdx+1);
+  var rows=D.inspAllRows.filter(function(r){
+    return dts.indexOf(r.dateStr)>=0&&(!line||r.line===line);
+  }).sort(function(a,b){return a.dateStr===b.dateStr?a.eq.localeCompare(b.eq):a.dateStr.localeCompare(b.dateStr);});
+  var title='검사기 조정 이력'+(line?' ('+line+' Line)':' (전체)')+' - '+(periodKey==='prev'?'전일':periodKey==='week'?'주간':'월간');
+  _showInspPopup(title,rows);
+}
+// 검사기 Worst5 설비 클릭 팝업
+function showInspEqDetail(eq,periodKey){
+  if(!D||!D.inspAllRows||!D.lossDates)return;
+  var dates=D.lossDates;
+  var lastDate=_inspDate&&dates.indexOf(_inspDate)>=0?_inspDate:dates[dates.length-1];
+  var lastIdx=dates.indexOf(lastDate);
+  var dts;
+  if(periodKey==='prev')dts=[lastDate];
+  else if(periodKey==='week')dts=dates.slice(Math.max(0,lastIdx-6),lastIdx+1);
+  else dts=dates.slice(Math.max(0,lastIdx-29),lastIdx+1);
+  var rows=D.inspAllRows.filter(function(r){
+    return r.eq===eq&&dts.indexOf(r.dateStr)>=0;
+  }).sort(function(a,b){return a.dateStr.localeCompare(b.dateStr);});
+  _showInspPopup(eq+' 검사기 이력 (주간)',rows);
+}
+function _showInspPopup(title,rows){
+  var dd=document.getElementById('modalContent');
+  var dt=document.getElementById('modalTitle');
+  if(!dd||!dt)return;
+  dt.textContent=title;
+  var h='<table><thead><tr><th>일자</th><th>설비</th><th>대분류</th><th>내용</th><th>불량수</th><th>정지시간</th><th>停</th></tr></thead><tbody>';
+  var totDef=0,totTm=0;
+  rows.forEach(function(r){
+    totDef+=r.defect;if(r.stop)totTm+=r.kpiTime;
+    h+='<tr><td>'+r.dateStr+'</td><td>'+r.eq+'</td><td style="font-size:10px">'+r.cat+'</td><td style="text-align:left;max-width:200px;overflow:hidden;text-overflow:ellipsis">'+(r.detail||'-')+'</td>';
+    h+='<td'+(r.defect>0?' style="color:#ef4444;font-weight:700"':'')+'>'+Math.round(r.defect).toLocaleString()+'</td>';
+    h+='<td'+(r.kpiTime>0?' style="color:#60a5fa;font-weight:700"':'')+'>'+Math.round(r.kpiTime)+'</td>';
+    h+='<td>'+(r.stop?'⛔':'')+'</td></tr>';
+  });
+  h+='<tr style="background:#d0d0d0;font-weight:700"><td colspan="4">합계 ('+rows.length+'건)</td>';
+  h+='<td style="color:#ef4444">'+Math.round(totDef).toLocaleString()+'</td>';
+  h+='<td style="color:#60a5fa">'+Math.round(totTm)+'분</td><td></td></tr>';
+  h+='</tbody></table>';
+  dd.innerHTML=h;
+  document.getElementById('detailModal').classList.add('show');
 }
 
 function initInspChart(){
