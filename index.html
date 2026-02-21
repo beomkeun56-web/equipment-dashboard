@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Production Performance v10.3</title>
+<title>Production Performance v10.4</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v10.3</h1>
+<h1>📊 Production Performance v10.4</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -583,6 +583,7 @@ function processWorkbook(wb){
       if(!lastXDate)continue;
       var rline=(rx[1]||'').toString().trim();if(!rline)continue;
       if(_lossDbg.rows===0){_lossDbg.sample='date='+lastXDate+' line='+rline+' col6='+rx[6]+' col9(稼动率)='+rx[9]+' col16='+rx[16];console.log('[日别汇总 첫데이터] '+_lossDbg.sample);}
+      if(_lossDbg.rows<6){var _cv=[];for(var _ci=15;_ci<Math.min(rx.length,32);_ci++)_cv.push(_ci+':'+rx[_ci]);console.log('[日别汇总 col15-31] row'+_lossDbg.rows+' '+rline+' → '+_cv.join(' | '));}
       _lossDbg.rows++;
       var rprod=typeof rx[6]==='number'?rx[6]:(parseFloat(rx[6])||0);
       var rkpi=typeof rx[15]==='number'?rx[15]:(parseFloat(rx[15])||0);
@@ -1986,7 +1987,15 @@ function buildInspPage(){
   h+='<span style="margin-left:auto"><label style="color:#94a3b8;font-size:11px">'+t('kpiDateLabel')+'</label><select onchange="renderInspWithDate(this.value)" style="'+selS+'">';
   dates.slice().reverse().forEach(function(d){h+='<option value="'+d+'"'+(d===lastDate?' selected':'')+'>'+d+'</option>';});
   h+='</select></span></h3>';
-  h+='<canvas id="inspDefChart"></canvas></div>';
+  h+='<canvas id="inspDefChart"></canvas>';
+  // 임시 디버그: 첫번째 날짜 raw값 표시
+  var _dbgDt=dates[0];var _dbgLd=D.lossByLineDate[_dbgDt]||{};
+  h+='<div style="margin-top:8px;padding:8px;background:#1a1a1a;border-radius:6px;font-size:11px;color:#94a3b8">';
+  h+='<b>[DEBUG] '+_dbgDt+'</b><br>';
+  ['K1','K2','G','H','E','Total'].forEach(function(ln){
+    var d=_dbgLd[ln];if(d)h+=ln+': cd(V)='+d.cd+' dd(Z)='+d.dd+' | ';
+  });
+  h+='</div></div>';
 
   // === Section 2: 검사기 조정 현황 KPI ===
   var inspRows=(D.allRows||[]).filter(function(r){return r.sub==='检查机';});
