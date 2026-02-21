@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Production Performance v10.9</title>
+<title>Production Performance v11.0</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -86,7 +86,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v10.9</h1>
+<h1>📊 Production Performance v11.0</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -417,7 +417,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='10.9'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='11.0'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -945,32 +945,12 @@ function buildHmLegend(page){
 
 function buildHmSettings(page){
   var cfg=_hmCfg[page]||_hmCfg.def;
-  var ss='font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid #333;cursor:pointer;';
-  var h='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0;padding:8px;background:#111;border-radius:8px;border:1px solid #222">';
-  h+='<span style="color:#94a3b8;font-size:11px;font-weight:700">팔레트</span>';
-  var allPals=Object.keys(HM_PALETTES).concat(['custom']);
-  allPals.forEach(function(k){
-    var on=k===cfg.pal;
-    h+='<button onclick="setHmPalette(\''+page+'\',\''+k+'\')" style="'+ss+'background:'+(on?'#3b82f6':'#1a1a1a')+';color:'+(on?'#fff':'#94a3b8')+'">'+(HM_PALETTE_NAMES[k]||k)+'</button>';
-  });
-  h+='<span style="color:#94a3b8;font-size:11px;font-weight:700;margin-left:12px">기준</span>';
+  var ss='font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid #c0c0c0;cursor:pointer;';
+  var h='<span style="color:#666;font-size:11px;font-weight:700">기준</span>';
   [{k:'all',l:'전체'},{k:'row',l:'세로'},{k:'col',l:'가로'}].forEach(function(o){
     var on=o.k===cfg.axis;
-    h+='<button onclick="setHmAxis(\''+page+'\',\''+o.k+'\')" style="'+ss+'background:'+(on?'#3b82f6':'#1a1a1a')+';color:'+(on?'#fff':'#94a3b8')+'">'+o.l+'</button>';
+    h+='<button onclick="setHmAxis(\''+page+'\',\''+o.k+'\')" style="'+ss+'background:'+(on?'#3b82f6':'#f0f0f0')+';color:'+(on?'#fff':'#666')+'">'+o.l+'</button>';
   });
-  h+='</div>';
-  if(cfg.pal==='custom'){
-    var cols=_loadCustomPal(page);
-    h+='<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:4px 0 8px;padding:8px;background:#111;border-radius:8px;border:1px solid #222">';
-    h+='<span style="color:#94a3b8;font-size:11px;font-weight:700">커스텀 색상 (1~7단계)</span>';
-    for(var ci=0;ci<7;ci++){
-      h+='<label style="display:flex;align-items:center;gap:2px;color:#94a3b8;font-size:10px">'+(ci+1);
-      h+='<input type="color" value="'+cols[ci]+'" onchange="setCustomColor(\''+page+'\','+ci+',this.value)" style="width:28px;height:22px;border:1px solid #444;border-radius:3px;background:none;cursor:pointer;padding:0">';
-      h+='</label>';
-    }
-    h+='<button onclick="resetCustomPal(\''+page+'\')" style="'+ss+'background:#1a1a1a;color:#f87171;margin-left:8px">초기화</button>';
-    h+='</div>';
-  }
   return h;
 }
 
@@ -985,7 +965,7 @@ function refreshPage(page){
     var el=document.getElementById('hm_def');
     var st=document.getElementById('hm_def_settings');
     if(el)el.innerHTML=buildDailyHT(D.hm_def,'불량수량',D.eq_order,D.all_dates,false,'def');
-    if(st)st.innerHTML=buildHmSettings('def')+buildHmLegend('def');
+    if(st)st.innerHTML=buildHmSettings('def');
   } else if(page==='stop'){
     var el2=document.getElementById('hm_time');
     var st2=document.getElementById('hm_time_settings');
@@ -995,7 +975,7 @@ function refreshPage(page){
       var _hmTF=[];for(var _tk in _htStop){var _sp=_tk.split('|');_hmTF.push({설비호:_sp[0],일자str:_sp[1],time:_htStop[_tk]})}
       el2.innerHTML=buildDailyHT(_hmTF,'time',D.eq_order,D.all_dates,true,'stop');
     }
-    if(st2)st2.innerHTML=buildHmSettings('stop')+buildHmLegend('stop');
+    if(st2)st2.innerHTML=buildHmSettings('stop');
   } else if(page==='loss'){
     var lp=document.getElementById('lossPanel');
     if(lp){lp.innerHTML=buildLossPage();if(_lossSubView==='daily')initLossChart();}
@@ -1551,11 +1531,12 @@ function buildLossPage(){
   var on=';background:#3b82f6;color:#fff;border-color:#3b82f6';
   var off=';background:#1a1a1a;color:#94a3b8';
   var h='<div class="bx"><h3>📉 '+t('lossTitle')+'</h3>';
-  h+='<div style="display:flex;gap:8px;margin-bottom:16px">';
+  h+='<div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap">';
   h+='<button style="'+bs+(_lossSubView==='daily'?on:off)+'" onclick="renderLoss(\'daily\')">📊 '+t('lossDaily')+'</button>';
   h+='<button style="'+bs+(_lossSubView==='detail'?on:off)+'" onclick="renderLoss(\'detail\')">🔍 '+t('lossDetail')+'</button>';
+  h+='<span style="margin-left:auto;display:flex;gap:6px;align-items:center">'+buildHmSettings('loss')+'</span>';
   h+='</div>';
-  h+=buildHmSettings('loss')+buildHmLegend('loss');
+  h+=buildHmLegend('loss');
   h+=(_lossSubView==='daily'?buildLossDaily():buildLossDetail());
   h+='</div>';
   return h;
@@ -1853,8 +1834,8 @@ function renderAll(){
     '<div class="bx" style="border-left:3px solid #f59e0b"><h3><span class="line-label" style="background:#f59e0b20;color:#f59e0b">K Line</span> '+t('lineDaily').replace(' Line','')+'<em>'+((ls.K||{}).cnt||0).toLocaleString()+t('items')+' · '+t('equip')+' '+((ls.K||{}).eq||0)+t('eqUnit')+'</em></h3><canvas id="dK"></canvas></div>'+
     '<div class="bx" style="border-left:3px solid #f59e0b"><h3><span class="line-label" style="background:#f59e0b20;color:#f59e0b">K Line</span> '+t('lineStopVs').replace(' Line','')+'</h3><div id="tKS"></div></div>'+
   '</div>'+
-  '<div class="pn"><div class="bx"><h3>🔥 '+t('hmDefTitle')+'</h3><div id="hm_def_settings">'+buildHmSettings('def')+buildHmLegend('def')+'</div><div class="hc" id="hm_def"></div></div></div>'+
-  '<div class="pn"><div class="bx"><h3>🔥 '+t('hmStopTitle')+'</h3><div id="hm_time_settings">'+buildHmSettings('stop')+buildHmLegend('stop')+'</div><div class="hc" id="hm_time"></div></div></div>'+
+  '<div class="pn"><div class="bx"><h3 style="display:flex;align-items:center;flex-wrap:wrap">🔥 '+t('hmDefTitle')+'<span style="margin-left:auto;display:flex;gap:6px;align-items:center" id="hm_def_settings">'+buildHmSettings('def')+'</span></h3>'+buildHmLegend('def')+'<div class="hc" id="hm_def"></div></div></div>'+
+  '<div class="pn"><div class="bx"><h3 style="display:flex;align-items:center;flex-wrap:wrap">🔥 '+t('hmStopTitle')+'<span style="margin-left:auto;display:flex;gap:6px;align-items:center" id="hm_time_settings">'+buildHmSettings('stop')+'</span></h3>'+buildHmLegend('stop')+'<div class="hc" id="hm_time"></div></div></div>'+
   '<div class="pn" id="stAnalysisPanel">'+buildSTAnalysisPage(D.stDates&&D.stDates.length?D.stDates[D.stDates.length-1]:'','daily')+'</div>'+
   '<div class="pn" id="inspPanel">'+buildInspPage()+'</div>';
 
@@ -2002,6 +1983,10 @@ function buildInspPage(){
 
   // === Section 2: 검사기 조정 현황 KPI ===
   var inspRows=(D.allRows||[]).filter(function(r){return r.sub==='检查机';});
+  // 디버그: lastDate 검사기 행 상세
+  var _dbgInsp=inspRows.filter(function(r){return r.dateStr===lastDate;});
+  console.log('[검사기KPI] lastDate='+lastDate+', 검사기행수='+_dbgInsp.length);
+  _dbgInsp.slice(0,10).forEach(function(r){console.log('[검사기KPI]',r.eq,'defect='+r.defect,'kpiTime='+r.kpiTime,'stop='+r.stop,'line='+r.line,'ds='+r.ds,'dateStr='+r.dateStr);});
   var lines=['K','G','H'];
   var lineColors={K:'#f59e0b',G:'#06b6d4',H:'#22c55e'};
   function getInspSum(dts,line){
