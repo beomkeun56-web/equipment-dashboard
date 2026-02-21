@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>현황 v13.7</title>
+<title>현황 v13.8</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -91,7 +91,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 현황 v13.7</h1>
+<h1>📊 현황 v13.8</h1>
 <div style="position:absolute;top:12px;right:20px;display:flex;gap:4px;align-items:center">
 <label class="file-btn" for="fileInput" id="fileBtnLabel" style="min-width:56px">파일선택</label>
 <button id="clearBtn" class="hd-btn" style="display:none" onclick="clearData()">초기화</button>
@@ -437,7 +437,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='13.7'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='13.8'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -1074,27 +1074,79 @@ function showOvSumPopup(type,line){
   var cs='cursor:pointer';
 
   if(type==='loss'||type==='pmLoss'){
-    title=(type==='loss'?'상세 Loss':'PM조정 Loss')+' Worst 7 ('+lineLbl+' · '+dt+')';
-    var dd=D.lossDetailByDateEq[dt]||{};
-    var eqs=Object.keys(dd).filter(function(eq){return _ovMl(eq,line)&&dd[eq].prod>0&&(type==='loss'?dd[eq].larr.reduce(function(s,v){return s+v},0)>0:dd[eq].larr[0]>0);});
-    eqs.sort(function(a,b){if(type==='loss'){return dd[b].larr.reduce(function(s,v){return s+v},0)/dd[b].prod-dd[a].larr.reduce(function(s,v){return s+v},0)/dd[a].prod;}return dd[b].larr[0]-dd[a].larr[0];});
-    eqs=eqs.slice(0,7);
-    // 각 컬럼별 max 계산 (히트맵용)
-    var colMax=new Array(10);for(var ci=0;ci<10;ci++){colMax[ci]=0;eqs.forEach(function(eq){var d=dd[eq];var pv=d.prod>0?d.larr[ci]/d.prod*100:0;if(pv>colMax[ci])colMax[ci]=pv;});}
-    var lrMax=0;eqs.forEach(function(eq){var d=dd[eq];var lr=d.larr.reduce(function(s,v){return s+v},0)/d.prod*100;if(lr>lrMax)lrMax=lr;});
-    var hdr=t('lossDetailHdr');
-    tb='<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:12px"><thead><tr><th>#</th><th>설비</th><th style="'+ra+'">생산</th><th style="'+ra+'">Loss율</th>';
-    for(var hi=0;hi<hdr.length;hi++)tb+='<th style="'+ra+'">'+hdr[hi]+'</th>';
+    title=(type==='loss'?'상세 Loss 현황':'PM조정 Loss 현황')+' ('+lineLbl+' · '+dt+')';
+    var dateData=D.lossDetailByDateEq[dt]||{};
+    var eqList=Object.keys(dateData).filter(function(eq){
+      if(!_ovMl(eq,line))return false;
+      var d=dateData[eq];return d.prod>0||d.larr.some(function(v){return v>0;});
+    }).sort();
+    // buildLossDetail과 동일한 스타일
+    var thS='background:#1a1a1a;color:#e2e8f0;padding:5px 8px;font-size:11px;border:1px solid #333;white-space:nowrap;text-align:center';
+    var tdS='padding:4px 8px;font-size:11px;border:1px solid #333;text-align:center;white-space:nowrap;background:#000;color:#cbd5e1';
+    var stkL='position:sticky;left:0;z-index:1;';
+    var _hdr=t('lossDetailHdr');var _nCols=_hdr.length;
+    // 히트맵 max 계산
+    var dtlCfg=_hmCfg.loss||{pal:'green_red',axis:'all'};
+    var eqVals={},allDtlMx=0,colMaxLoss=0,colMaxArr=new Array(_nCols).fill(0);
+    eqList.forEach(function(eq){
+      var d=dateData[eq],prod=d.prod||0;
+      var lossSum=0;d.larr.forEach(function(v){lossSum+=v;});
+      var lossR=prod>0?lossSum/prod:0;
+      if(lossR>colMaxLoss)colMaxLoss=lossR;if(lossR>allDtlMx)allDtlMx=lossR;
+      var pcts=d.larr.map(function(v,i){var p=prod>0&&v>0?v/prod:0;if(p>colMaxArr[i])colMaxArr[i]=p;if(p>allDtlMx)allDtlMx=p;return p;});
+      eqVals[eq]={lossR:lossR,pcts:pcts};
+    });
+    var dtlFloor=(allDtlMx||0.001)*0.3;
+    var dtlRowMx={},dtlColMx={};
+    if(dtlCfg.axis==='row'){eqList.forEach(function(eq){var rm=eqVals[eq].lossR;eqVals[eq].pcts.forEach(function(p){if(p>rm)rm=p});dtlRowMx[eq]=Math.max(rm,dtlFloor)||0.001})}
+    if(dtlCfg.axis==='col'){dtlColMx['_loss']=Math.max(colMaxLoss,dtlFloor)||0.001;for(var ci=0;ci<_nCols;ci++)dtlColMx[ci]=Math.max(colMaxArr[ci],dtlFloor)||0.001}
+    function getDtlMx(eq,colIdx){if(dtlCfg.axis==='row')return dtlRowMx[eq]||(allDtlMx||0.001);if(dtlCfg.axis==='col')return dtlColMx[colIdx]||0.001;return allDtlMx||0.001}
+    // 테이블 렌더링
+    tb='<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">';
+    tb+='<table style="border-collapse:collapse;min-width:max-content"><thead><tr>';
+    tb+='<th style="'+thS+';'+stkL+'background:#1a1a1a;min-width:56px">'+t('equip')+'</th>';
+    tb+='<th style="'+thS+'">'+t('plan')+'</th><th style="'+thS+'">'+t('prod')+'</th><th style="'+thS+'">'+t('utilRate')+'</th><th style="'+thS+'">'+t('lossRate')+'</th>';
+    _hdr.forEach(function(c){tb+='<th style="'+thS+'">'+c+'</th>';});
     tb+='</tr></thead><tbody>';
-    eqs.forEach(function(eq,i){var d=dd[eq];var ls=d.larr.reduce(function(s,v){return s+v},0);
-      var lr=d.prod>0?(ls/d.prod*100):0;
+    var totProd=0,totCapa=0,totLarr=new Array(_nCols).fill(0);
+    eqList.forEach(function(eq){
+      var d=dateData[eq];var prod=d.prod||0;
+      var stA=getSTActual(eq)||(d.st>0?d.st:0);
+      var capa=stA>0?Math.round(86400/stA):0;
+      var util=capa>0?prod/capa:0;
+      var ev=eqVals[eq];totProd+=prod;totCapa+=capa;
       tb+='<tr style="'+cs+'" onclick="showOvSumDetail2(\''+eq+'\')">';
-      tb+='<td>'+(i+1)+'</td><td style="color:#60a5fa;text-decoration:underline">'+eq+'</td>';
-      tb+='<td style="'+ra+'">'+Math.round(d.prod).toLocaleString()+'</td>';
-      tb+='<td style="'+ra+';'+getHmStyle(lr,lrMax,'loss')+'">'+lr.toFixed(2)+'%</td>';
-      for(var li=0;li<d.larr.length;li++){var pv=d.prod>0&&d.larr[li]>0?d.larr[li]/d.prod*100:0;tb+='<td style="'+ra+';'+(pv>0?getHmStyle(pv,colMax[li],'loss'):'')+'">'+(pv>0?pv.toFixed(2)+'%':'-')+'</td>';}
+      tb+='<td style="'+tdS+';'+stkL+'background:#1a1a1a;color:#60a5fa;font-weight:700;min-width:56px;text-decoration:underline">'+eq+'</td>';
+      tb+='<td style="'+tdS+'">'+capa.toLocaleString()+'</td>';
+      tb+='<td style="'+tdS+'">'+Math.round(prod).toLocaleString()+'</td>';
+      tb+='<td style="'+tdS+';color:'+(util>=0.9?'#22c55e':util>=0.7?'#f59e0b':'#ef4444')+'">'+(util>0?(util*100).toFixed(1)+'%':'-')+'</td>';
+      tb+='<td style="'+tdS+';'+getHmStyle(ev.lossR,getDtlMx(eq,'_loss'),'loss')+'">'+fmtLoss(ev.lossR)+'</td>';
+      d.larr.forEach(function(v,i){
+        totLarr[i]+=v;var pct=ev.pcts[i];
+        var cellTxt;
+        if(i===9&&v>0&&prod===0){cellTxt=Math.round(v).toLocaleString();}
+        else{cellTxt=pct>0?(pct*100).toFixed(2)+'%':'-';}
+        var sty=getHmStyle(pct,getDtlMx(eq,i),'loss');
+        tb+='<td style="'+tdS+';'+sty+'">'+cellTxt+'</td>';
+      });
       tb+='</tr>';
     });
+    // Total 행
+    var totUtil=totCapa>0?totProd/totCapa:0;
+    var totLossSum=0;totLarr.forEach(function(v){totLossSum+=v;});
+    var totLoss=totProd>0?totLossSum/totProd:0;
+    tb+='<tr style="background:#1a1a1a;font-weight:700">';
+    tb+='<td style="'+tdS+';'+stkL+'background:#1a1a1a;color:#e2e8f0;min-width:56px">'+t('total')+'</td>';
+    tb+='<td style="'+tdS+'">'+totCapa.toLocaleString()+'</td>';
+    tb+='<td style="'+tdS+'">'+Math.round(totProd).toLocaleString()+'</td>';
+    tb+='<td style="'+tdS+';color:'+(totUtil>=0.9?'#22c55e':totUtil>=0.7?'#f59e0b':'#ef4444')+'">'+(totUtil>0?(totUtil*100).toFixed(1)+'%':'-')+'</td>';
+    tb+='<td style="'+tdS+';'+getHmStyle(totLoss,getDtlMx('_total','_loss'),'loss')+'">'+fmtLoss(totLoss)+'</td>';
+    totLarr.forEach(function(v,i){
+      var pct=totProd>0&&v>0?v/totProd:0;
+      var cellTxt=pct>0?(pct*100).toFixed(2)+'%':'-';
+      tb+='<td style="'+tdS+';'+getHmStyle(pct,getDtlMx('_total',i),'loss')+'">'+cellTxt+'</td>';
+    });
+    tb+='</tr>';
     tb+='</tbody></table></div>';
     tb+='<p style="color:#94a3b8;font-size:10px;margin-top:8px">설비 클릭 → 조정이력 상세</p>';
   }
@@ -1723,50 +1775,40 @@ function buildOverviewPage(){
     dates.forEach(function(d){h+='<option value="'+d+'"'+(d===_ovLast?' selected':'')+'>'+d+'</option>';});
     h+='</select></span></h3>';
     var _ovLnC={G:'#06b6d4',H:'#22c55e',K:'#f59e0b'};var _ovLnBg={G:'rgba(6,182,212,0.08)',H:'rgba(34,197,94,0.08)',K:'rgba(245,158,11,0.08)'};
-    // 히트맵 색조 함수: 값과 최대값 기준으로 getHmStyle 사용
-    function _ovHm(v,mx){if(!v||!mx)return'';return getHmStyle(v,mx,'loss');}
     // 목표값
     var _ovTgt={equip:null,loss:6,pmLoss:1,pmStop:50,fullDef:0.8,inspStop:20,tech:null};
     // 달성율 계산: % 항목은 목표 이하가 달성 (실적/목표*100 역수), 시간도 목표 이하가 달성
     function _ovAchv(val,tgt,isLower){if(tgt==null||tgt===0)return null;if(isLower)return tgt/val*100;return val/tgt*100;}
     function _ovAchvTd(val,tgt){if(tgt==null)return'<td>-</td>';var a=val<=0?100:(val<=tgt?100:Math.round(tgt/val*100));var clr=a>=100?'#22c55e':'#ef4444';return'<td style="color:'+clr+';font-weight:700">'+a+'%</td>';}
     function _ovAchvTdMin(val,tgt){if(tgt==null)return'<td>-</td>';var a=val<=0?100:(val<=tgt?100:Math.round(tgt/val*100));var clr=a>=100?'#22c55e':'#ef4444';return'<td style="color:'+clr+';font-weight:700">'+a+'%</td>';}
-    // 각 행의 값 수집 (히트맵용 max 계산)
-    var _ovVals={};
-    var _ovLossVals=[_ovLossTot];_ovLns.forEach(function(ln){_ovLossVals.push(_ovLoss(ln));});_ovVals.loss=Math.max.apply(null,_ovLossVals);
     var _pmLT=_ovPmLoss(null);
-    var _ovPmVals=[_pmLT];_ovLns.forEach(function(ln){_ovPmVals.push(_ovPmLoss(ln));});_ovVals.pmLoss=Math.max.apply(null,_ovPmVals);
     var _psT=Math.round(_ovStopAvg(null));
-    var _ovPsVals=[_psT];_ovLns.forEach(function(ln){_ovPsVals.push(_ovStopAvg(ln));});_ovVals.pmStop=Math.max.apply(null,_ovPsVals);
-    var _ovFdVals=[_ovFullDefTot];_ovLns.forEach(function(ln){_ovFdVals.push(_ovFullDef(ln));});_ovVals.fullDef=Math.max.apply(null,_ovFdVals);
     var _isT=Math.round(_ovInspTime(null));
-    var _ovIsVals=[_isT];_ovLns.forEach(function(ln){_ovIsVals.push(_ovInspTime(ln));});_ovVals.inspStop=Math.max.apply(null,_ovIsVals);
-    var _ovTkVals=[_ovTech(null)];_ovLns.forEach(function(ln){_ovTkVals.push(_ovTech(ln));});_ovVals.tech=Math.max.apply(null,_ovTkVals);
 
     h+='<div style="overflow-x:auto"><table class="sum-tbl ov-sum"><thead><tr><th>'+t('category')+'</th><th>목표</th><th style="color:#60a5fa">실적</th><th>달성율</th>';
     _ovLns.forEach(function(ln){h+='<th style="color:'+_ovLnC[ln]+';background:rgba('+{G:'6,182,212',H:'34,197,94',K:'245,158,11'}[ln]+',0.10)">'+ln+' Line</th>';});
     h+='</tr></thead><tbody>';
     // 가동설비
     h+='<tr><td>'+t('equip')+'</td><td>-</td><td style="font-weight:700">'+_ovEqT+t('eqUnit')+'</td><td>-</td>';
-    _ovLns.forEach(function(ln){h+='<td>'+((_ovLS[ln]||{}).eq||0)+t('eqUnit')+'</td>';});h+='</tr>';
+    _ovLns.forEach(function(ln){h+='<td style="background:'+_ovLnBg[ln]+'">'+((_ovLS[ln]||{}).eq||0)+t('eqUnit')+'</td>';});h+='</tr>';
     // Loss
-    h+='<tr><td>Loss</td><td>6%</td><td onclick="showOvSumPopup(\'loss\',null)" style="font-weight:700;'+_ovHm(_ovLossTot,_ovVals.loss)+'">'+_ovLossTot.toFixed(1)+'%</td>'+_ovAchvTd(_ovLossTot,6);
-    _ovLns.forEach(function(ln){var v=_ovLoss(ln);h+='<td onclick="showOvSumPopup(\'loss\',\''+ln+'\')" style="'+_ovHm(v,_ovVals.loss)+'">'+v.toFixed(1)+'%</td>';});h+='</tr>';
+    h+='<tr><td>Loss</td><td>6%</td><td onclick="showOvSumPopup(\'loss\',null)" style="font-weight:700">'+_ovLossTot.toFixed(1)+'%</td>'+_ovAchvTd(_ovLossTot,6);
+    _ovLns.forEach(function(ln){h+='<td onclick="showOvSumPopup(\'loss\',\''+ln+'\')" style="background:'+_ovLnBg[ln]+'">'+_ovLoss(ln).toFixed(1)+'%</td>';});h+='</tr>';
     // 조정Loss
-    h+='<tr><td>'+t('lossDetailHdr')[0]+'Loss</td><td>1%</td><td onclick="showOvSumPopup(\'pmLoss\',null)" style="font-weight:700;'+_ovHm(_pmLT,_ovVals.pmLoss)+'">'+_pmLT.toFixed(1)+'%</td>'+_ovAchvTd(_pmLT,1);
-    _ovLns.forEach(function(ln){var v=_ovPmLoss(ln);h+='<td onclick="showOvSumPopup(\'pmLoss\',\''+ln+'\')" style="'+_ovHm(v,_ovVals.pmLoss)+'">'+v.toFixed(1)+'%</td>';});h+='</tr>';
+    h+='<tr><td>'+t('lossDetailHdr')[0]+'Loss</td><td>1%</td><td onclick="showOvSumPopup(\'pmLoss\',null)" style="font-weight:700">'+_pmLT.toFixed(1)+'%</td>'+_ovAchvTd(_pmLT,1);
+    _ovLns.forEach(function(ln){h+='<td onclick="showOvSumPopup(\'pmLoss\',\''+ln+'\')" style="background:'+_ovLnBg[ln]+'">'+_ovPmLoss(ln).toFixed(1)+'%</td>';});h+='</tr>';
     // 조정정지
-    h+='<tr><td>'+t('lossDetailHdr')[0]+t('stop')+'</td><td>50분</td><td onclick="showOvSumPopup(\'pmStop\',null)" style="font-weight:700;'+_ovHm(_psT,_ovVals.pmStop)+'">'+_psT+t('min')+'</td>'+_ovAchvTdMin(_psT,50);
-    _ovLns.forEach(function(ln){var v=_ovStopAvg(ln);h+='<td onclick="showOvSumPopup(\'pmStop\',\''+ln+'\')" style="'+_ovHm(v,_ovVals.pmStop)+'">'+Math.round(v)+t('min')+'</td>';});h+='</tr>';
+    h+='<tr><td>'+t('lossDetailHdr')[0]+t('stop')+'</td><td>50분</td><td onclick="showOvSumPopup(\'pmStop\',null)" style="font-weight:700">'+_psT+t('min')+'</td>'+_ovAchvTdMin(_psT,50);
+    _ovLns.forEach(function(ln){h+='<td onclick="showOvSumPopup(\'pmStop\',\''+ln+'\')" style="background:'+_ovLnBg[ln]+'">'+Math.round(_ovStopAvg(ln))+t('min')+'</td>';});h+='</tr>';
     // 완전불량
-    h+='<tr><td>'+t('fullDef')+'</td><td>0.8%</td><td onclick="showOvSumPopup(\'fullDef\',null)" style="font-weight:700;'+_ovHm(_ovFullDefTot,_ovVals.fullDef)+'">'+_ovFullDefTot.toFixed(1)+'%</td>'+_ovAchvTd(_ovFullDefTot,0.8);
-    _ovLns.forEach(function(ln){var v=_ovFullDef(ln);h+='<td onclick="showOvSumPopup(\'fullDef\',\''+ln+'\')" style="'+_ovHm(v,_ovVals.fullDef)+'">'+v.toFixed(1)+'%</td>';});h+='</tr>';
+    h+='<tr><td>'+t('fullDef')+'</td><td>0.8%</td><td onclick="showOvSumPopup(\'fullDef\',null)" style="font-weight:700">'+_ovFullDefTot.toFixed(1)+'%</td>'+_ovAchvTd(_ovFullDefTot,0.8);
+    _ovLns.forEach(function(ln){h+='<td onclick="showOvSumPopup(\'fullDef\',\''+ln+'\')" style="background:'+_ovLnBg[ln]+'">'+_ovFullDef(ln).toFixed(1)+'%</td>';});h+='</tr>';
     // 검사정지
-    h+='<tr><td>'+t('tabInsp')+t('stop')+'</td><td>20분</td><td onclick="showOvSumPopup(\'inspStop\',null)" style="font-weight:700;'+_ovHm(_isT,_ovVals.inspStop)+'">'+_isT+t('min')+'</td>'+_ovAchvTdMin(_isT,20);
-    _ovLns.forEach(function(ln){var v=_ovInspTime(ln);h+='<td onclick="showOvSumPopup(\'inspStop\',\''+ln+'\')" style="'+_ovHm(v,_ovVals.inspStop)+'">'+Math.round(v)+t('min')+'</td>';});h+='</tr>';
+    h+='<tr><td>'+t('tabInsp')+t('stop')+'</td><td>20분</td><td onclick="showOvSumPopup(\'inspStop\',null)" style="font-weight:700">'+_isT+t('min')+'</td>'+_ovAchvTdMin(_isT,20);
+    _ovLns.forEach(function(ln){h+='<td onclick="showOvSumPopup(\'inspStop\',\''+ln+'\')" style="background:'+_ovLnBg[ln]+'">'+Math.round(_ovInspTime(ln))+t('min')+'</td>';});h+='</tr>';
     // 기술조정
-    h+='<tr><td>'+t('lossDetailHdr')[9]+'</td><td>-</td><td onclick="showOvSumPopup(\'tech\',null)" style="font-weight:700;'+_ovHm(_ovTech(null),_ovVals.tech)+'">'+Math.round(_ovTech(null))+'ea</td><td>-</td>';
-    _ovLns.forEach(function(ln){var v=_ovTech(ln);h+='<td onclick="showOvSumPopup(\'tech\',\''+ln+'\')" style="'+_ovHm(v,_ovVals.tech)+'">'+(v>0?Math.round(v)+'ea':'')+'</td>';});h+='</tr>';
+    h+='<tr><td>'+t('lossDetailHdr')[9]+'</td><td>-</td><td onclick="showOvSumPopup(\'tech\',null)" style="font-weight:700">'+Math.round(_ovTech(null))+'ea</td><td>-</td>';
+    _ovLns.forEach(function(ln){var v=Math.round(_ovTech(ln));h+='<td onclick="showOvSumPopup(\'tech\',\''+ln+'\')" style="background:'+_ovLnBg[ln]+'">'+(v>0?v+'ea':'')+'</td>';});h+='</tr>';
     h+='</tbody></table></div>';
   }
 
