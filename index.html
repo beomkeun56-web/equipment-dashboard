@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>현황 v14.0</title>
+<title>현황 v14.1</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -92,7 +92,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 현황 v14.0</h1>
+<h1>📊 현황 v14.1</h1>
 <div style="position:absolute;top:12px;right:20px;display:flex;gap:4px;align-items:center">
 <label class="file-btn" for="fileInput" id="fileBtnLabel" style="min-width:56px">파일선택</label>
 <button id="clearBtn" class="hd-btn" style="display:none" onclick="clearData()">초기화</button>
@@ -438,7 +438,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='14.0'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='14.1'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -1216,7 +1216,7 @@ function showOvSumDetail2(eq){
   var back='<div style="margin-bottom:10px"><span onclick="showOvSumPopup(\''+type+'\','+(line?"'"+line+"'":'null')+')" style="cursor:pointer;color:#60a5fa;font-size:12px">&larr; 목록으로</span></div>';
   var title=eq+' 조정이력 ('+dt+')';
   var rows=(D.allRows||[]).filter(function(r){return r.dateStr===dt&&r.eq===eq;});
-  rows.sort(function(a,b){return(b.time||0)-(a.time||0);});
+  rows.sort(function(a,b){return(b.defect||0)-(a.defect||0);});
   var defMax=0,tmMax=0;rows.forEach(function(r){if((r.defect||0)>defMax)defMax=r.defect;if((r.time||0)>tmMax)tmMax=r.time;});
   var tb=back+'<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:12px"><thead><tr><th>#</th><th>소분류</th><th>내용</th><th style="'+ra+'">불량수량</th><th style="'+ra+'">정지시간</th><th>정지</th></tr></thead><tbody>';
   var tDef=0,tTime=0;
