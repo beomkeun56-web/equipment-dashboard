@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v8.3</title>
+<title>Production Performance v8.4</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v8.3</h1>
+<h1>📊 Production Performance v8.4</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -871,8 +871,8 @@ function showDetail(eq,date,sortBy){
 }
 function closeModal(){document.getElementById('modalOverlay').classList.remove('show')}
 
-function showKpiDetail(datesJson,line){
-  var dts=JSON.parse(datesJson);
+function showKpiDetail(datesArr,line){
+  var dts=datesArr;
   var lineLbl=line?line+' Line':'전체';
   var rows=[];
   dts.forEach(function(dt){
@@ -1135,36 +1135,36 @@ function buildSummaryPage(){
   lines.forEach(function(ln){h+='<th style="color:'+lineColors[ln]+'">'+ln+' Line</th>'});
   h+='</tr></thead><tbody>';
 
+  // KPI 팝업용 날짜 데이터 전역 저장
+  window._kpiDates={day:[lastDate],week:weekDates,month:monthDates};
+
   // 전일
-  var dayJ=JSON.stringify([lastDate]).replace(/'/g,'&#39;');
   var allDayAvg=getAllEqAvgStop(lastDate);
   h+='<tr><td>'+t('yesterday')+'</td>';
-  h+='<td class="hm-click" onclick="showKpiDetail(\''+dayJ+'\',\'\')">'+fmtCell(allDayAvg,KPI_TARGET)+'</td>';
+  h+='<td class="hm-click" onclick="showKpiDetail(window._kpiDates.day,\'\')">'+fmtCell(allDayAvg,KPI_TARGET)+'</td>';
   lines.forEach(function(ln){
     var v=getLineEqAvgStop(lastDate,ln);
-    h+='<td class="hm-click" onclick="showKpiDetail(\''+dayJ+'\',\''+ln+'\')">'+fmtCell(v,KPI_TARGET)+'</td>';
+    h+='<td class="hm-click" onclick="showKpiDetail(window._kpiDates.day,\''+ln+'\')">'+fmtCell(v,KPI_TARGET)+'</td>';
   });
   h+='</tr>';
 
   // 주간
-  var weekJ=JSON.stringify(weekDates).replace(/'/g,'&#39;');
   var allWeekAvg=getAllEqAvgStopMulti(weekDates);
   h+='<tr><td>'+t('weekly')+'</td>';
-  h+='<td class="hm-click" onclick="showKpiDetail(\''+weekJ+'\',\'\')">'+fmtCell(allWeekAvg,KPI_TARGET)+'</td>';
+  h+='<td class="hm-click" onclick="showKpiDetail(window._kpiDates.week,\'\')">'+fmtCell(allWeekAvg,KPI_TARGET)+'</td>';
   lines.forEach(function(ln){
     var v=getLineEqAvgStopMulti(weekDates,ln);
-    h+='<td class="hm-click" onclick="showKpiDetail(\''+weekJ+'\',\''+ln+'\')">'+fmtCell(v,KPI_TARGET)+'</td>';
+    h+='<td class="hm-click" onclick="showKpiDetail(window._kpiDates.week,\''+ln+'\')">'+fmtCell(v,KPI_TARGET)+'</td>';
   });
   h+='</tr>';
 
   // 월간
-  var monthJ=JSON.stringify(monthDates).replace(/'/g,'&#39;');
   var allMonthAvg=getAllEqAvgStopMulti(monthDates);
   h+='<tr><td>'+t('monthly')+'</td>';
-  h+='<td class="hm-click" onclick="showKpiDetail(\''+monthJ+'\',\'\')">'+fmtCell(allMonthAvg,KPI_TARGET)+'</td>';
+  h+='<td class="hm-click" onclick="showKpiDetail(window._kpiDates.month,\'\')">'+fmtCell(allMonthAvg,KPI_TARGET)+'</td>';
   lines.forEach(function(ln){
     var v=getLineEqAvgStopMulti(monthDates,ln);
-    h+='<td class="hm-click" onclick="showKpiDetail(\''+monthJ+'\',\''+ln+'\')">'+fmtCell(v,KPI_TARGET)+'</td>';
+    h+='<td class="hm-click" onclick="showKpiDetail(window._kpiDates.month,\''+ln+'\')">'+fmtCell(v,KPI_TARGET)+'</td>';
   });
   h+='</tr>';
   h+='</tbody></table></div></div>';
