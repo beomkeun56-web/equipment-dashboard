@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>현황 v12.0</title>
+<title>현황 v12.1</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -90,7 +90,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 현황 v12.0</h1>
+<h1>📊 현황 v12.1</h1>
 <div style="position:absolute;top:12px;right:20px;display:flex;gap:4px;align-items:center">
 <label class="file-btn" for="fileInput" id="fileBtnLabel" style="min-width:56px">파일선택</label>
 <button id="clearBtn" class="hd-btn" style="display:none" onclick="clearData()">초기화</button>
@@ -422,7 +422,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='12.0'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='12.1'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -1378,17 +1378,17 @@ function buildSummaryPage(){
   var top3=eqScores.slice(0,3);
 
   h+='<div class="sum-section"><div class="bx"><h3>&#9888; '+t('top3Title')+' <em>'+t('eqHmDays')+' '+recentDates.length+t('eqHmDaysSuffix')+'</em></h3>';
-  h+='<table class="sum-tbl" style="font-size:11px;table-layout:auto;width:100%"><thead><tr>'+t('top3Hdr').map(function(hh){return'<th style="white-space:nowrap">'+hh+'</th>'}).join('')+'</tr></thead><tbody>';
+  h+='<table class="sum-tbl" style="font-size:11px;table-layout:fixed;width:100%"><colgroup><col style="width:24px"><col style="width:18%"><col style="width:22%"><col style="width:14%"><col style="width:18%"><col></colgroup><thead><tr>'+t('top3Hdr').map(function(hh){return'<th>'+hh+'</th>'}).join('')+'</tr></thead><tbody>';
   if(top3.length){
     top3.forEach(function(item,idx){
       var stopCnt=D.allRows.filter(function(r){return r.eq===item.eq&&recentDates.indexOf(r.ds)>=0&&r.stop}).length;
       h+='<tr>';
       h+='<td style="font-weight:700">'+(idx+1)+'</td>';
       h+='<td style="font-weight:700;color:#60a5fa;cursor:pointer;text-decoration:underline" onclick="showEqHeatmap(\''+item.eq+'\')">'+item.eq+'</td>';
-      h+='<td style="color:#f59e0b;font-weight:700">'+Math.round(item.totalTime).toLocaleString()+t('min')+'<br><span style="font-size:10px;color:#94a3b8;font-weight:400">'+t('avgDay')+' '+Math.round(item.avgTime).toLocaleString()+t('min')+'</span></td>';
-      h+='<td>'+stopCnt+t('items')+'<br><span style="font-size:10px;color:#94a3b8">'+item.activeDays+'/'+recentDates.length+t('eqHmDaysSuffix')+'</span></td>';
-      h+='<td style="color:#ef4444;font-weight:700">'+Math.round(item.totalDef).toLocaleString()+'<br><span style="font-size:10px;color:#94a3b8;font-weight:400">'+t('avgDay')+' '+Math.round(item.avgDef).toLocaleString()+'</span></td>';
-      h+='<td style="text-align:left;font-size:10px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+item.topSubs+'</td>';
+      h+='<td style="color:#f59e0b;font-weight:700;word-break:break-all">'+Math.round(item.totalTime).toLocaleString()+t('min')+'<br><span style="font-size:9px;color:#94a3b8;font-weight:400">'+t('avgDay')+Math.round(item.avgTime).toLocaleString()+'</span></td>';
+      h+='<td style="word-break:break-all">'+stopCnt+t('items')+'<br><span style="font-size:9px;color:#94a3b8">'+item.activeDays+'/'+recentDates.length+'</span></td>';
+      h+='<td style="color:#ef4444;font-weight:700;word-break:break-all">'+Math.round(item.totalDef).toLocaleString()+'<br><span style="font-size:9px;color:#94a3b8;font-weight:400">'+t('avgDay')+Math.round(item.avgDef).toLocaleString()+'</span></td>';
+      h+='<td style="text-align:left;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+item.topSubs+'</td>';
       h+='</tr>';
     });
   }else{
