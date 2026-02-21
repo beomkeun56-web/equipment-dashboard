@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>현황 v11.5</title>
+<title>현황 v11.6</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -42,7 +42,7 @@ body{font-family:'넥슨Lv2고딕','NEXON Lv2 Gothic',sans-serif;background:#000
 .worst-tbl td{color:#cbd5e1}
 .worst-tbl tr:first-child td{color:#ef4444;font-weight:700}
 .tabs{display:flex;flex-wrap:wrap;gap:4px;padding:10px 16px;background:#0a0a0a;border-bottom:1px solid #1a1a1a;position:sticky;top:0;z-index:100}
-.tab{padding:8px 16px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;background:#1a1a1a;color:#94a3b8;border:1px solid #2a2a2a;transition:all .2s;white-space:nowrap;touch-action:manipulation}
+.tab{padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;background:#1a1a1a;color:#94a3b8;border:1px solid #2a2a2a;transition:all .2s;white-space:nowrap;touch-action:manipulation}
 .tab.on{background:#3b82f6;color:#fff;border-color:#3b82f6}
 .tab:hover:not(.on){background:#2a2a2a;color:#e2e8f0}
 .pn{display:none;padding:16px}.pn.on{display:block}
@@ -86,19 +86,15 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 현황 v11.5</h1>
-<div style="position:absolute;top:8px;right:16px;display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-<div style="display:flex;gap:4px">
-<label class="file-btn" for="fileInput" id="fileBtnLabel" style="min-width:76px;text-align:center;padding:6px 0;font-size:11px;min-height:30px;border-radius:6px">📂 파일선택</label>
-<button id="clearBtn" style="display:none;background:#ef4444;color:#fff;padding:6px 0;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;min-width:76px;text-align:center;touch-action:manipulation;min-height:30px" onclick="clearData()">🗑 초기화</button>
-</div>
-<div style="display:flex;gap:4px">
-<button onclick="setLang('ko')" style="padding:6px 0;border-radius:6px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:76px;text-align:center;background:#3b82f6;color:#fff;font-weight:700;min-height:30px" id="langKo">한국어</button>
-<button onclick="setLang('zh')" style="padding:6px 0;border-radius:6px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:76px;text-align:center;background:#1a1a1a;color:#94a3b8;min-height:30px" id="langZh">中文</button>
-</div>
+<h1>📊 현황 v11.6</h1>
+<div style="position:absolute;top:10px;right:16px;display:flex;gap:4px;align-items:center">
+<label class="file-btn" for="fileInput" id="fileBtnLabel" style="min-width:62px;text-align:center;padding:5px 8px;font-size:11px;min-height:28px;border-radius:6px">파일선택</label>
+<button id="clearBtn" style="display:none;background:#ef4444;color:#fff;padding:5px 8px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;min-width:62px;text-align:center;touch-action:manipulation;min-height:28px" onclick="clearData()">초기화</button>
+<button onclick="setLang('ko')" style="padding:5px 8px;border-radius:6px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:62px;text-align:center;background:#3b82f6;color:#fff;font-weight:700;min-height:28px" id="langKo">한국어</button>
+<button onclick="setLang('zh')" style="padding:5px 8px;border-radius:6px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:62px;text-align:center;background:#1a1a1a;color:#94a3b8;min-height:28px" id="langZh">中文</button>
 </div>
 <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(this)">
-<p style="font-size:10px;color:#94a3b8;margin-top:4px"><span id="fileName"></span> <span class="file-status" id="fileStatus"></span></p>
+<span id="fileName" style="display:none"></span><span id="fileStatus" style="display:none"></span>
 </div>
 <!-- KPI area removed -->
 <div class="tabs" id="tabArea" style="display:none"></div>
@@ -412,15 +408,15 @@ function updateStaticTexts(){
 var _inf=document.getElementById('info');if(_inf)_inf.textContent='';
 var fn=document.getElementById('fileName');if(fn&&!D)fn.textContent=t('selectFile');
 var fs=document.getElementById('fileStatus');if(fs&&!D)fs.textContent=t('waiting');
-var fb=document.getElementById('fileBtnLabel');if(fb)fb.innerHTML='\ud83d\udcc2 '+t('fileSelect');
-var cb=document.getElementById('clearBtn');if(cb)cb.innerHTML='\ud83d\uddd1 '+t('init');
+var fb=document.getElementById('fileBtnLabel');if(fb)fb.innerHTML=t('fileSelect');
+var cb=document.getElementById('clearBtn');if(cb)cb.innerHTML=t('init');
 var lt=document.getElementById('loadingOverlay');if(lt)lt.innerHTML='\u23f3 '+t('analyzing');
 var wt=document.getElementById('welcomeTitle');if(wt)wt.textContent=t('uploadTitle');
 var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '+t('uploadDesc')+'<br><strong>_POLE_\u6ec1\u5dde\u7a3c\u52a8\u65e5\u522b\u73b0\u51b5</strong> '+t('uploadSupport')+'<br>PM\u8c03\u6574 '+t('autoAnalysis');
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='11.5'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='11.6'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -1819,14 +1815,14 @@ function renderAll(){
 
 
   document.getElementById('tabArea').innerHTML=
-    '<div class="tab on" onclick="go(0)">📉 '+t('tabLoss')+'</div>'+
-    '<div class="tab" onclick="go(1)">📋 '+t('tabStop')+'</div>'+
-    '<div class="tab" onclick="go(2)">📊 '+t('tabUtil')+'</div>'+
-    '<div class="tab" onclick="go(3)">⏱ '+t('tabDaily')+'</div>'+
-    '<div class="tab" onclick="go(4)">🔥 '+t('tabDefHm')+'</div>'+
-    '<div class="tab" onclick="go(5)">🔥 '+t('tabStopHm')+'</div>'+
-    '<div class="tab" onclick="go(6)">⚙ '+t('tabST')+'</div>'+
-    '<div class="tab" onclick="go(7)">🔍 '+t('tabInsp')+'</div>';
+    '<div class="tab on" onclick="go(0)">'+t('tabLoss')+'</div>'+
+    '<div class="tab" onclick="go(1)">'+t('tabStop')+'</div>'+
+    '<div class="tab" onclick="go(2)">'+t('tabUtil')+'</div>'+
+    '<div class="tab" onclick="go(3)">'+t('tabDaily')+'</div>'+
+    '<div class="tab" onclick="go(4)">'+t('tabDefHm')+'</div>'+
+    '<div class="tab" onclick="go(5)">'+t('tabStopHm')+'</div>'+
+    '<div class="tab" onclick="go(6)">'+t('tabST')+'</div>'+
+    '<div class="tab" onclick="go(7)">'+t('tabInsp')+'</div>';
 
 
   document.getElementById('root').innerHTML=
@@ -1979,21 +1975,6 @@ function buildInspPage(){
   var lastDate=_inspDate&&dates.indexOf(_inspDate)>=0?_inspDate:dates[dates.length-1];
   var lastIdx=dates.indexOf(lastDate);
   var weekDates=dates.slice(Math.max(0,lastIdx-6),lastIdx+1);
-  var monthDates=dates.slice(Math.max(0,lastIdx-29),lastIdx+1);
-  var allDates=D.all_dates||dates;
-  // ds→fullDate 매핑
-  var _dsMap={};
-  (D.allRows||[]).forEach(function(r){if(r.ds&&r.dateStr&&!_dsMap[r.ds])_dsMap[r.ds]=r.dateStr;});
-
-  // === Section 1: 완전+치수 불량 현황 그래프 ===
-  var selS='background:#1a1a1a;color:#e2e8f0;border:1px solid #3b82f6;border-radius:6px;padding:4px 8px;font-size:12px;margin-left:8px';
-  var h='<div class="bx"><h3 style="display:flex;align-items:center;flex-wrap:wrap">📊 '+t('inspDefChart')+' <em>K1·K2·G='+t('fullDef')+', H='+t('dimDef')+'</em>';
-  h+='<span style="margin-left:auto"><label style="color:#94a3b8;font-size:11px">'+t('kpiDateLabel')+'</label><select onchange="renderInspWithDate(this.value)" style="'+selS+'">';
-  dates.slice().reverse().forEach(function(d){h+='<option value="'+d+'"'+(d===lastDate?' selected':'')+'>'+d+'</option>';});
-  h+='</select></span></h3>';
-  h+='<canvas id="inspDefChart"></canvas></div>';
-
-  // === Section 2: 검사기 조정 현황 KPI (inspAllRows: 모든 大分类) ===
   var inspRows=D.inspAllRows||[];
   var lines=['K','G','H'];
   var lineColors={K:'#f59e0b',G:'#06b6d4',H:'#22c55e'};
@@ -2006,46 +1987,61 @@ function buildInspPage(){
     });
     return{def:Math.round(def),time:Math.round(tm)};
   }
-  h+='<div class="bx"><h3>🔧 '+t('inspKpi')+'</h3>';
-  h+='<table class="sum-tbl"><thead><tr><th>'+t('category')+'</th><th colspan="2" style="color:#60a5fa">'+t('total')+'</th>';
-  lines.forEach(function(ln){h+='<th colspan="2" style="color:'+lineColors[ln]+'">'+ln+' Line</th>';});
+
+  // === Section 1: 전일 KPI (맨 위) ===
+  var selS='background:#1a1a1a;color:#e2e8f0;border:1px solid #3b82f6;border-radius:6px;padding:4px 8px;font-size:12px;margin-left:8px';
+  var h='<div class="bx"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('inspKpi')+' ('+t('prevDay')+': '+lastDate+')';
+  h+='<span style="margin-left:auto"><label style="color:#94a3b8;font-size:11px">'+t('kpiDateLabel')+'</label><select onchange="renderInspWithDate(this.value)" style="'+selS+'">';
+  dates.slice().reverse().forEach(function(d){h+='<option value="'+d+'"'+(d===lastDate?' selected':'')+'>'+d+'</option>';});
+  h+='</select></span></h3>';
+  h+='<table class="sum-tbl"><thead><tr><th></th><th colspan="2" style="color:#60a5fa">'+t('total')+'</th>';
+  lines.forEach(function(ln){h+='<th colspan="2" style="color:'+lineColors[ln]+'">'+ln+'</th>';});
   h+='</tr><tr><th></th>';
   for(var ci=0;ci<4;ci++){h+='<th style="font-size:10px;color:#94a3b8">'+t('inspDefW')+'</th><th style="font-size:10px;color:#94a3b8">'+t('inspTimeW')+'</th>';}
   h+='</tr></thead><tbody>';
-  var periods=[{label:t('prevDay'),dts:[lastDate],pk:'prev'},{label:t('weekly'),dts:weekDates,pk:'week'},{label:t('monthly'),dts:monthDates,pk:'month'}];
-  periods.forEach(function(p){
-    var all=getInspSum(p.dts,null);
-    h+='<tr><th>'+p.label+'</th>';
-    h+='<td style="color:#ef4444;font-weight:700;cursor:pointer;text-decoration:underline" onclick="showInspDetail(\''+p.pk+'\',null)">'+all.def.toLocaleString()+'</td>';
-    h+='<td style="color:#60a5fa;font-weight:700;cursor:pointer;text-decoration:underline" onclick="showInspDetail(\''+p.pk+'\',null)">'+all.time.toLocaleString()+t('min')+'</td>';
-    lines.forEach(function(ln){
-      var v=getInspSum(p.dts,ln);
-      h+='<td style="color:#ef4444;cursor:pointer;text-decoration:underline" onclick="showInspDetail(\''+p.pk+'\',\''+ln+'\')">'+v.def.toLocaleString()+'</td>';
-      h+='<td style="color:#60a5fa;cursor:pointer;text-decoration:underline" onclick="showInspDetail(\''+p.pk+'\',\''+ln+'\')">'+v.time.toLocaleString()+t('min')+'</td>';
+  var all=getInspSum([lastDate],null);
+  h+='<tr><th>'+t('prevDay')+'</th>';
+  h+='<td style="color:#ef4444;font-weight:700;cursor:pointer;text-decoration:underline" onclick="showInspDetail(\'prev\',null)">'+all.def.toLocaleString()+'</td>';
+  h+='<td style="color:#60a5fa;font-weight:700;cursor:pointer;text-decoration:underline" onclick="showInspDetail(\'prev\',null)">'+all.time.toLocaleString()+t('min')+'</td>';
+  lines.forEach(function(ln){
+    var v=getInspSum([lastDate],ln);
+    h+='<td style="color:#ef4444;cursor:pointer;text-decoration:underline" onclick="showInspDetail(\'prev\',\''+ln+'\')">'+v.def.toLocaleString()+'</td>';
+    h+='<td style="color:#60a5fa;cursor:pointer;text-decoration:underline" onclick="showInspDetail(\'prev\',\''+ln+'\')">'+v.time.toLocaleString()+t('min')+'</td>';
+  });
+  h+='</tr></tbody></table></div>';
+
+  // === Section 2: 그래프 (세로 작게) ===
+  h+='<div class="bx"><h3>'+t('inspDefChart')+' <em>K1·K2·G='+t('fullDef')+', H='+t('dimDef')+'</em></h3>';
+  h+='<canvas id="inspDefChart" style="max-height:220px"></canvas></div>';
+
+  // === Section 3: 일자별 % 값 테이블 (히트맵 색조) ===
+  var inspLines=[{ln:'K1',key:'cd'},{ln:'K2',key:'cd'},{ln:'G',key:'cd'},{ln:'H',key:'dd'}];
+  h+='<div class="bx"><h3>'+t('inspDefChart')+' '+t('date')+'별</h3><div class="hc">';
+  h+='<table class="ht"><thead><tr><th>'+t('line')+'</th>';
+  dates.forEach(function(d){var dt=new Date(d+'T00:00:00');h+='<th>'+(dt.getMonth()+1)+'/'+(dt.getDate())+'</th>';});
+  h+='</tr></thead><tbody>';
+  // 각 라인의 최대값 계산 (전체에서)
+  var allVals=[];
+  inspLines.forEach(function(cfg){
+    dates.forEach(function(dt){
+      var dd=D.lossByLineDate[dt]&&D.lossByLineDate[dt][cfg.ln];
+      if(dd&&dd.p>0){var vv=dd[cfg.key]/dd.p*100;if(vv>0)allVals.push(vv);}
+    });
+  });
+  var inspMx=allVals.length?Math.max.apply(null,allVals):1;
+  inspLines.forEach(function(cfg){
+    h+='<tr><th>'+cfg.ln+'</th>';
+    dates.forEach(function(dt){
+      var dd=D.lossByLineDate[dt]&&D.lossByLineDate[dt][cfg.ln];
+      var v=0;if(dd&&dd.p>0)v=dd[cfg.key]/dd.p*100;
+      var sty=getHmStyle(v,inspMx,'def');
+      h+='<td style="'+sty+'">'+((v>0)?v.toFixed(2)+'%':'')+'</td>';
     });
     h+='</tr>';
   });
-  h+='</tbody></table></div>';
+  h+='</tbody></table></div></div>';
 
-  // === Section 3: Worst 5 ===
-  // 3-1: 불량률 Worst 5 (이번주, 라인+날짜) K1/K2/G=완전불량, H=치수불량
-  var inspDefList=[];
-  weekDates.forEach(function(dt){
-    var ld=D.lossByLineDate[dt];if(!ld)return;
-    ['K1','K2','G'].forEach(function(ln){if(ld[ln]&&ld[ln].cd>0&&ld[ln].p>0)inspDefList.push({line:ln,date:dt,val:Math.round(ld[ln].cd/ld[ln].p*10000)/100,type:t('fullDef')});});
-    if(ld['H']&&ld['H'].dd>0&&ld['H'].p>0)inspDefList.push({line:'H',date:dt,val:Math.round(ld['H'].dd/ld['H'].p*10000)/100,type:t('dimDef')});
-  });
-  inspDefList.sort(function(a,b){return b.val-a.val});
-  // 3-1: 불량률 Worst 5
-  h+='<div class="bx"><h4 style="color:#ef4444;margin-bottom:8px">🔴 '+t('inspDefChart')+' Worst 5</h4>';
-  h+='<table class="worst-tbl"><thead><tr><th>#</th><th>'+t('line')+'</th><th>'+t('date')+'</th><th>'+t('category')+'</th><th>%</th></tr></thead><tbody>';
-  inspDefList.slice(0,5).forEach(function(item,i){
-    h+='<tr><td>'+(i+1)+'</td><td>'+item.line+'</td><td>'+item.date+'</td><td style="font-size:10px;color:#94a3b8">'+item.type+'</td><td style="color:#ef4444;font-weight:700">'+item.val.toFixed(2)+'%</td></tr>';
-  });
-  if(!inspDefList.length)h+='<tr><td colspan="5" style="color:#94a3b8">'+t('noData')+'</td></tr>';
-  h+='</tbody></table></div>';
-
-  // 3-2: 검사기 불량수/정지시간 Worst 5 (이번주, 설비별, inspAllRows)
+  // === Section 4: Worst 5 (불량수량 + 정지시간 합쳐서 좌우) ===
   var eqMap={};
   weekDates.forEach(function(ds){
     inspRows.forEach(function(r){
@@ -2053,24 +2049,26 @@ function buildInspPage(){
     });
   });
   var eqArr=Object.keys(eqMap).map(function(k){return eqMap[k];});
-  // 불량수 Worst
   var byDef=eqArr.slice().sort(function(a,b){return b.def-a.def}).slice(0,5);
-  h+='<div class="bx"><h4 style="color:#ef4444;margin-bottom:8px">🔧 '+t('inspDefW')+' Worst 5</h4>';
+  var byTime=eqArr.slice().sort(function(a,b){return b.time-a.time}).slice(0,5);
+  h+='<div class="worst-grid">';
+  // 불량수량 Worst 5
+  h+='<div class="bx"><h4 style="color:#ef4444;margin-bottom:8px;font-size:12px">'+t('inspDefW')+' Worst 5</h4>';
   h+='<table class="worst-tbl"><thead><tr><th>#</th><th>'+t('equip')+'</th><th>'+t('inspDefW')+'</th></tr></thead><tbody>';
   byDef.forEach(function(item,i){
-    h+='<tr style="cursor:pointer" onclick="showInspEqDetail(\''+item.eq+'\',\'week\')"><td>'+(i+1)+'</td><td>'+item.eq+'</td><td style="color:#ef4444;font-weight:700">'+Math.round(item.def).toLocaleString()+'</td></tr>';
+    h+='<tr style="cursor:pointer" onclick="showInspEqDetail(\''+item.eq.replace(/'/g,"\\'")+'\',\'week\')"><td>'+(i+1)+'</td><td>'+item.eq+'</td><td style="color:#ef4444;font-weight:700">'+Math.round(item.def).toLocaleString()+'</td></tr>';
   });
   if(!byDef.length)h+='<tr><td colspan="3" style="color:#94a3b8">'+t('noData')+'</td></tr>';
   h+='</tbody></table></div>';
-  // 정지시간 Worst
-  var byTime=eqArr.slice().sort(function(a,b){return b.time-a.time}).slice(0,5);
-  h+='<div class="bx"><h4 style="color:#60a5fa;margin-bottom:8px">⏱ '+t('inspTimeW')+' Worst 5</h4>';
+  // 정지시간 Worst 5
+  h+='<div class="bx"><h4 style="color:#60a5fa;margin-bottom:8px;font-size:12px">'+t('inspTimeW')+' Worst 5</h4>';
   h+='<table class="worst-tbl"><thead><tr><th>#</th><th>'+t('equip')+'</th><th>'+t('inspTimeW')+'</th></tr></thead><tbody>';
   byTime.forEach(function(item,i){
-    h+='<tr style="cursor:pointer" onclick="showInspEqDetail(\''+item.eq+'\',\'week\')"><td>'+(i+1)+'</td><td>'+item.eq+'</td><td style="color:#60a5fa;font-weight:700">'+Math.round(item.time).toLocaleString()+t('min')+'</td></tr>';
+    h+='<tr style="cursor:pointer" onclick="showInspEqDetail(\''+item.eq.replace(/'/g,"\\'")+'\',\'week\')"><td>'+(i+1)+'</td><td>'+item.eq+'</td><td style="color:#60a5fa;font-weight:700">'+Math.round(item.time).toLocaleString()+t('min')+'</td></tr>';
   });
   if(!byTime.length)h+='<tr><td colspan="3" style="color:#94a3b8">'+t('noData')+'</td></tr>';
   h+='</tbody></table></div>';
+  h+='</div>';
 
   return h;
 }
@@ -2148,12 +2146,12 @@ function initInspChart(){
   });
   var ch=new Chart(canvas,{type:'line',
     data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),datasets:datasets},
-    options:{responsive:true,maintainAspectRatio:true,aspectRatio:2,
-      plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}},position:'bottom'},
+    options:{responsive:true,maintainAspectRatio:true,aspectRatio:3,
+      plugins:{legend:{labels:{color:'#94a3b8',font:{size:10}},position:'bottom'},
         tooltip:{backgroundColor:'#0a0a0a',titleColor:'#60a5fa',bodyColor:'#e2e8f0',callbacks:{label:function(c){return c.dataset.label+': '+(c.parsed.y!=null?c.parsed.y.toFixed(2)+'%':'-');}}}},
-      scales:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'#1f2937'}},
-        y:{ticks:{color:'#94a3b8',font:{size:10},callback:function(v){return v+'%'}},grid:{color:'#1f2937'},min:0,
-          title:{display:true,text:'%',color:'#64748b',font:{size:10}}}}}});
+      scales:{x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'#1f2937'}},
+        y:{ticks:{color:'#94a3b8',font:{size:9},callback:function(v){return v+'%'}},grid:{color:'#1f2937'},min:0,
+          title:{display:true,text:'%',color:'#64748b',font:{size:9}}}}}});
   charts.push(ch);
 }
 
