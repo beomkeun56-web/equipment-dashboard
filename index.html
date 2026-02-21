@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v8.1</title>
+<title>Production Performance v8.2</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v8.1</h1>
+<h1>📊 Production Performance v8.2</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -398,7 +398,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='8.1'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='8.2'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -871,6 +871,37 @@ function showDetail(eq,date,sortBy){
 }
 function closeModal(){document.getElementById('modalOverlay').classList.remove('show')}
 
+function showKpiDetail(datesJson,line){
+  var dts=JSON.parse(datesJson);
+  var lineLbl=line?line+' Line':'전체';
+  var rows=[];
+  dts.forEach(function(dt){
+    var fd=null;
+    if(D.allRows){D.allRows.some(function(r){if(r.ds===dt&&r.dateStr){fd=r.dateStr;return true}});}
+    if(!fd){var kk=Object.keys(D.kpiStopByDateEq||{});kk.some(function(f){var p=f.split('-');if(p.length===3&&p[1]+'/'+p[2]===dt){fd=f;return true}});}
+    if(!fd)return;
+    var stops=(D.kpiStopByDateEq||{})[fd];if(!stops)return;
+    Object.keys(stops).forEach(function(eq){
+      if(line&&eq[0]!==line)return;
+      if(stops[eq]>0)rows.push({date:dt,eq:eq,time:stops[eq]});
+    });
+  });
+  rows.sort(function(a,b){return a.date===b.date?b.time-a.time:a.date>b.date?1:-1});
+  var period=dts.length===1?dts[0]:(dts[0]+' ~ '+dts[dts.length-1]);
+  document.getElementById('modalTitle').textContent='KPI 정지시간 상세 - '+lineLbl+' ('+period+')';
+  var tb='<table><thead><tr><th>일자</th><th>설비</th><th>정지시간(분)</th></tr></thead><tbody>';
+  var totalTime=0;
+  rows.forEach(function(r){
+    totalTime+=r.time;
+    tb+='<tr><td>'+r.date+'</td><td>'+r.eq+'</td><td>'+Math.round(r.time)+'</td></tr>';
+  });
+  tb+='<tr style="background:#1a1a1a;font-weight:700"><td colspan="2">합계 ('+rows.length+'건)</td><td>'+Math.round(totalTime)+'</td></tr>';
+  tb+='</tbody></table>';
+  if(!rows.length)tb='<p style="color:#94a3b8;padding:12px">해당 기간 정지 이력이 없습니다.</p>';
+  document.getElementById('modalBody').innerHTML=tb;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
 function showEqHeatmap(eq){
   if(!D||!D.allRows||!D.all_dates)return;
   var dates=D.all_dates;
@@ -1105,32 +1136,35 @@ function buildSummaryPage(){
   h+='</tr></thead><tbody>';
 
   // 전일
+  var dayJ=JSON.stringify([lastDate]).replace(/'/g,'&#39;');
   var allDayAvg=getAllEqAvgStop(lastDate);
   h+='<tr><td>'+t('yesterday')+'</td>';
-  h+='<td>'+fmtCell(allDayAvg,KPI_TARGET)+'</td>';
+  h+='<td class="hm-click" onclick="showKpiDetail(\''+dayJ+'\',\'\')">'+fmtCell(allDayAvg,KPI_TARGET)+'</td>';
   lines.forEach(function(ln){
     var v=getLineEqAvgStop(lastDate,ln);
-    h+='<td>'+fmtCell(v,KPI_TARGET)+'</td>';
+    h+='<td class="hm-click" onclick="showKpiDetail(\''+dayJ+'\',\''+ln+'\')">'+fmtCell(v,KPI_TARGET)+'</td>';
   });
   h+='</tr>';
 
   // 주간
+  var weekJ=JSON.stringify(weekDates).replace(/'/g,'&#39;');
   var allWeekAvg=getAllEqAvgStopMulti(weekDates);
   h+='<tr><td>'+t('weekly')+'</td>';
-  h+='<td>'+fmtCell(allWeekAvg,KPI_TARGET)+'</td>';
+  h+='<td class="hm-click" onclick="showKpiDetail(\''+weekJ+'\',\'\')">'+fmtCell(allWeekAvg,KPI_TARGET)+'</td>';
   lines.forEach(function(ln){
     var v=getLineEqAvgStopMulti(weekDates,ln);
-    h+='<td>'+fmtCell(v,KPI_TARGET)+'</td>';
+    h+='<td class="hm-click" onclick="showKpiDetail(\''+weekJ+'\',\''+ln+'\')">'+fmtCell(v,KPI_TARGET)+'</td>';
   });
   h+='</tr>';
 
   // 월간
+  var monthJ=JSON.stringify(monthDates).replace(/'/g,'&#39;');
   var allMonthAvg=getAllEqAvgStopMulti(monthDates);
   h+='<tr><td>'+t('monthly')+'</td>';
-  h+='<td>'+fmtCell(allMonthAvg,KPI_TARGET)+'</td>';
+  h+='<td class="hm-click" onclick="showKpiDetail(\''+monthJ+'\',\'\')">'+fmtCell(allMonthAvg,KPI_TARGET)+'</td>';
   lines.forEach(function(ln){
     var v=getLineEqAvgStopMulti(monthDates,ln);
-    h+='<td>'+fmtCell(v,KPI_TARGET)+'</td>';
+    h+='<td class="hm-click" onclick="showKpiDetail(\''+monthJ+'\',\''+ln+'\')">'+fmtCell(v,KPI_TARGET)+'</td>';
   });
   h+='</tr>';
   h+='</tbody></table></div></div>';
