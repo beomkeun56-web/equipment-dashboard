@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Production Performance v10.0</title>
+<title>Production Performance v10.1</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v10.0</h1>
+<h1>📊 Production Performance v10.1</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -247,7 +247,16 @@ hmStopTitle:'설비 일자별 조정시간(분)',
 lineDaily:' Line 일자별 정지시간 / 불량수량',
 lineStopVs:' Line 정지 vs 비정지',
 allDaily:'전체 일자별 정지시간 / 불량수량',
-allStopVs:'전체 정지 vs 비정지'
+allStopVs:'전체 정지 vs 비정지',
+tabInsp:'검사기관리',
+inspDefChart:'완전+치수 불량 현황',
+inspKpi:'검사기 조정 현황',
+inspWorst:'이번주 Worst 5',
+fullDef:'완전불량',
+dimDef:'치수불량',
+prevDay:'전일',
+inspDefW:'불량수량',
+inspTimeW:'정지시간'
 },
 zh:{
 fileSelect:'选择文件',
@@ -380,7 +389,16 @@ hmStopTitle:'设备日别调整时间(分)',
 lineDaily:' Line 日别停机时间 / 不良数量',
 lineStopVs:' Line 停机 vs 非停机',
 allDaily:'全体日别停机时间 / 不良数量',
-allStopVs:'全体停机 vs 非停机'
+allStopVs:'全体停机 vs 非停机',
+tabInsp:'检查机管理',
+inspDefChart:'完全+尺寸 不良 现况',
+inspKpi:'检查机 调整 现况',
+inspWorst:'本周 Worst 5',
+fullDef:'完全不良',
+dimDef:'尺寸不良',
+prevDay:'前日',
+inspDefW:'不良数量',
+inspTimeW:'停机时间'
 }
 };
 function t(k){return(I[LANG]||I.ko)[k]||(I.ko)[k]||k;}
@@ -398,7 +416,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='8.2'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='10.1'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -570,9 +588,11 @@ function processWorkbook(wb){
       var rkpi=typeof rx[15]==='number'?rx[15]:(parseFloat(rx[15])||0);
       var rloss=typeof rx[16]==='number'?rx[16]:(parseFloat(rx[16])||0);
       var rutil=typeof rx[9]==='number'?rx[9]:(parseFloat(rx[9])||0);
+      var rFullDef=typeof rx[21]==='number'?rx[21]:(parseFloat(rx[21])||0); // col V=完全不良%
+      var rDimDef=typeof rx[25]==='number'?rx[25]:(parseFloat(rx[25])||0); // col Z=尺寸不良%
       if(rloss>=1.0)continue;
       if(!lossByLineDate[lastXDate])lossByLineDate[lastXDate]={};
-      lossByLineDate[lastXDate][rline]={r:rloss,p:rprod,u:rutil};
+      lossByLineDate[lastXDate][rline]={r:rloss,p:rprod,u:rutil,cd:rFullDef,dd:rDimDef};
       if(!lossAccumByLine[rline])lossAccumByLine[rline]={prod:0,loss:0};
       lossAccumByLine[rline].prod+=rprod;lossAccumByLine[rline].loss+=rkpi;
     }
@@ -1800,7 +1820,8 @@ function renderAll(){
     '<div class="tab" onclick="go(3)">⏱ '+t('tabDaily')+'</div>'+
     '<div class="tab" onclick="go(4)">🔥 '+t('tabDefHm')+'</div>'+
     '<div class="tab" onclick="go(5)">🔥 '+t('tabStopHm')+'</div>'+
-    '<div class="tab" onclick="go(6)">⚙ '+t('tabST')+'</div>';
+    '<div class="tab" onclick="go(6)">⚙ '+t('tabST')+'</div>'+
+    '<div class="tab" onclick="go(7)">🔍 '+t('tabInsp')+'</div>';
 
 
   document.getElementById('root').innerHTML=
@@ -1822,10 +1843,13 @@ function renderAll(){
   '</div>'+
   '<div class="pn"><div class="bx"><h3>🔥 '+t('hmDefTitle')+'</h3><div id="hm_def_settings">'+buildHmSettings('def')+buildHmLegend('def')+'</div><div class="hc" id="hm_def"></div></div></div>'+
   '<div class="pn"><div class="bx"><h3>🔥 '+t('hmStopTitle')+'</h3><div id="hm_time_settings">'+buildHmSettings('stop')+buildHmLegend('stop')+'</div><div class="hc" id="hm_time"></div></div></div>'+
-  '<div class="pn" id="stAnalysisPanel">'+buildSTAnalysisPage(D.stDates&&D.stDates.length?D.stDates[D.stDates.length-1]:'','daily')+'</div>';
+  '<div class="pn" id="stAnalysisPanel">'+buildSTAnalysisPage(D.stDates&&D.stDates.length?D.stDates[D.stDates.length-1]:'','daily')+'</div>'+
+  '<div class="pn" id="inspPanel">'+buildInspPage()+'</div>';
 
   // Render summary chart
   renderWorstWeekChart();
+  // Render inspection chart
+  initInspChart();
 
   var maxTime=0,fixedQty=10000,exceeded=false;
   [D.daily_G,D.daily_H,D.daily_K].forEach(function(ld){ld.forEach(function(r){var t=Math.round(r.avgTime||0);if(t>maxTime)maxTime=t;var d=Math.round(r.defect);if(d>fixedQty){fixedQty=Math.ceil(d/1000)*1000;exceeded=true}})});
@@ -1939,6 +1963,170 @@ function buildSTTable(prod,stop,getCapaFn,editable){
   });
   h+='</tbody></table></div>';
   return h;
+}
+
+// ===================== 검사기관리 =====================
+var _inspDate='';
+function renderInspWithDate(date){_inspDate=date;var p=document.getElementById('inspPanel');if(p){p.innerHTML=buildInspPage();initInspChart();}}
+function buildInspPage(){
+  if(!D||!D.lossDates||!D.lossDates.length)return'<div style="padding:20px;color:#94a3b8">'+t('noData')+'</div>';
+  var dates=D.lossDates;
+  var lastDate=_inspDate&&dates.indexOf(_inspDate)>=0?_inspDate:dates[dates.length-1];
+  var lastIdx=dates.indexOf(lastDate);
+  var weekDates=dates.slice(Math.max(0,lastIdx-6),lastIdx+1);
+  var monthDates=dates.slice(Math.max(0,lastIdx-29),lastIdx+1);
+  var allDates=D.all_dates||dates;
+  // ds→fullDate 매핑
+  var _dsMap={};
+  (D.allRows||[]).forEach(function(r){if(r.ds&&r.dateStr&&!_dsMap[r.ds])_dsMap[r.ds]=r.dateStr;});
+
+  // === Section 1: 완전+치수 불량 현황 그래프 ===
+  var selS='background:#1a1a1a;color:#e2e8f0;border:1px solid #3b82f6;border-radius:6px;padding:4px 8px;font-size:12px;margin-left:8px';
+  var h='<div class="bx"><h3 style="display:flex;align-items:center;flex-wrap:wrap">📊 '+t('inspDefChart');
+  h+='<span style="margin-left:auto"><label style="color:#94a3b8;font-size:11px">'+t('kpiDateLabel')+'</label><select onchange="renderInspWithDate(this.value)" style="'+selS+'">';
+  dates.slice().reverse().forEach(function(d){h+='<option value="'+d+'"'+(d===lastDate?' selected':'')+'>'+d+'</option>';});
+  h+='</select></span></h3>';
+  h+='<canvas id="inspDefChart"></canvas></div>';
+
+  // === Section 2: 검사기 조정 현황 KPI ===
+  var inspRows=(D.allRows||[]).filter(function(r){return r.sub==='检查机';});
+  var lines=['K','G','H'];
+  var lineColors={K:'#f59e0b',G:'#06b6d4',H:'#22c55e'};
+  function getInspSum(dts,line){
+    var def=0,tm=0;
+    dts.forEach(function(ds){
+      inspRows.forEach(function(r){
+        if(r.ds===ds&&(!line||r.line===line)){def+=r.defect;if(r.stop)tm+=r.kpiTime||0;}
+      });
+    });
+    return{def:Math.round(def),time:Math.round(tm)};
+  }
+  h+='<div class="bx"><h3>🔧 '+t('inspKpi')+'</h3>';
+  h+='<table class="sum-tbl"><thead><tr><th>'+t('category')+'</th><th colspan="2" style="color:#60a5fa">'+t('total')+'</th>';
+  lines.forEach(function(ln){h+='<th colspan="2" style="color:'+lineColors[ln]+'">'+ln+' Line</th>';});
+  h+='</tr><tr><th></th>';
+  for(var ci=0;ci<4;ci++){h+='<th style="font-size:10px;color:#94a3b8">'+t('inspDefW')+'</th><th style="font-size:10px;color:#94a3b8">'+t('inspTimeW')+'</th>';}
+  h+='</tr></thead><tbody>';
+  var periods=[{label:t('prevDay'),dts:[lastDate]},{label:t('weekly'),dts:weekDates},{label:t('monthly'),dts:monthDates}];
+  periods.forEach(function(p){
+    var all=getInspSum(p.dts,null);
+    h+='<tr><th>'+p.label+'</th>';
+    h+='<td style="color:#ef4444;font-weight:700">'+all.def.toLocaleString()+'</td>';
+    h+='<td style="color:#60a5fa;font-weight:700">'+all.time.toLocaleString()+t('min')+'</td>';
+    lines.forEach(function(ln){
+      var v=getInspSum(p.dts,ln);
+      h+='<td style="color:#ef4444">'+v.def.toLocaleString()+'</td>';
+      h+='<td style="color:#60a5fa">'+v.time.toLocaleString()+t('min')+'</td>';
+    });
+    h+='</tr>';
+  });
+  h+='</tbody></table></div>';
+
+  // === Section 3: Worst 5 ===
+  // 3-1: 완전불량/치수불량 Worst 5 (이번주, 라인+날짜 조합)
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">';
+  // 완전불량 Worst
+  var cdList=[];
+  weekDates.forEach(function(dt){
+    var ld=D.lossByLineDate[dt];if(!ld)return;
+    Object.keys(ld).forEach(function(ln){
+      if(ld[ln].cd>0)cdList.push({line:ln,date:dt,val:ld[ln].cd});
+    });
+  });
+  cdList.sort(function(a,b){return b.val-a.val});
+  h+='<div class="bx"><h4 style="color:#ef4444;margin-bottom:8px">🔴 '+t('fullDef')+' Worst 5</h4>';
+  h+='<table class="worst-tbl"><thead><tr><th>#</th><th>'+t('line')+'</th><th>'+t('date')+'</th><th>%</th></tr></thead><tbody>';
+  cdList.slice(0,5).forEach(function(item,i){
+    h+='<tr><td>'+(i+1)+'</td><td>'+item.line+'</td><td>'+item.date+'</td><td style="color:#ef4444;font-weight:700">'+(item.val*100).toFixed(2)+'%</td></tr>';
+  });
+  if(!cdList.length)h+='<tr><td colspan="4" style="color:#94a3b8">'+t('noData')+'</td></tr>';
+  h+='</tbody></table></div>';
+
+  // 치수불량 Worst
+  var ddList=[];
+  weekDates.forEach(function(dt){
+    var ld=D.lossByLineDate[dt];if(!ld)return;
+    Object.keys(ld).forEach(function(ln){
+      if(ld[ln].dd>0)ddList.push({line:ln,date:dt,val:ld[ln].dd});
+    });
+  });
+  ddList.sort(function(a,b){return b.val-a.val});
+  h+='<div class="bx"><h4 style="color:#f59e0b;margin-bottom:8px">🟡 '+t('dimDef')+' Worst 5</h4>';
+  h+='<table class="worst-tbl"><thead><tr><th>#</th><th>'+t('line')+'</th><th>'+t('date')+'</th><th>%</th></tr></thead><tbody>';
+  ddList.slice(0,5).forEach(function(item,i){
+    h+='<tr><td>'+(i+1)+'</td><td>'+item.line+'</td><td>'+item.date+'</td><td style="color:#f59e0b;font-weight:700">'+(item.val*100).toFixed(2)+'%</td></tr>';
+  });
+  if(!ddList.length)h+='<tr><td colspan="4" style="color:#94a3b8">'+t('noData')+'</td></tr>';
+  h+='</tbody></table></div></div>';
+
+  // 3-2: 검사기 불량수/정지시간 Worst 5 (이번주, 설비별)
+  var eqMap={};
+  weekDates.forEach(function(ds){
+    inspRows.forEach(function(r){
+      if(r.ds===ds){if(!eqMap[r.eq])eqMap[r.eq]={eq:r.eq,def:0,time:0};eqMap[r.eq].def+=r.defect;if(r.stop)eqMap[r.eq].time+=(r.kpiTime||0);}
+    });
+  });
+  var eqArr=Object.keys(eqMap).map(function(k){return eqMap[k];});
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">';
+  // 불량수 Worst
+  var byDef=eqArr.slice().sort(function(a,b){return b.def-a.def}).slice(0,5);
+  h+='<div class="bx"><h4 style="color:#ef4444;margin-bottom:8px">🔧 '+t('inspDefW')+' Worst 5</h4>';
+  h+='<table class="worst-tbl"><thead><tr><th>#</th><th>'+t('equip')+'</th><th>'+t('inspDefW')+'</th></tr></thead><tbody>';
+  byDef.forEach(function(item,i){
+    h+='<tr><td>'+(i+1)+'</td><td>'+item.eq+'</td><td style="color:#ef4444;font-weight:700">'+Math.round(item.def).toLocaleString()+'</td></tr>';
+  });
+  if(!byDef.length)h+='<tr><td colspan="3" style="color:#94a3b8">'+t('noData')+'</td></tr>';
+  h+='</tbody></table></div>';
+  // 정지시간 Worst
+  var byTime=eqArr.slice().sort(function(a,b){return b.time-a.time}).slice(0,5);
+  h+='<div class="bx"><h4 style="color:#60a5fa;margin-bottom:8px">⏱ '+t('inspTimeW')+' Worst 5</h4>';
+  h+='<table class="worst-tbl"><thead><tr><th>#</th><th>'+t('equip')+'</th><th>'+t('inspTimeW')+'</th></tr></thead><tbody>';
+  byTime.forEach(function(item,i){
+    h+='<tr><td>'+(i+1)+'</td><td>'+item.eq+'</td><td style="color:#60a5fa;font-weight:700">'+Math.round(item.time).toLocaleString()+t('min')+'</td></tr>';
+  });
+  if(!byTime.length)h+='<tr><td colspan="3" style="color:#94a3b8">'+t('noData')+'</td></tr>';
+  h+='</tbody></table></div></div>';
+
+  return h;
+}
+
+function initInspChart(){
+  var canvas=document.getElementById('inspDefChart');
+  if(!canvas||!D||!D.lossDates||!D.lossDates.length)return;
+  var dates=D.lossDates;
+  var lines=['K1','K2','G','H','E'];
+  var lineColors={K1:'#3b82f6',K2:'#8b5cf6',G:'#06b6d4',H:'#22c55e',E:'#f59e0b',Total:'#f87171'};
+  // 완전불량 datasets (실선)
+  var datasets=[];
+  lines.forEach(function(ln){
+    datasets.push({label:ln+' '+t('fullDef'),data:dates.map(function(dt){var d=D.lossByLineDate[dt]&&D.lossByLineDate[dt][ln];return d&&d.cd>0?Math.round(d.cd*10000)/100:null;}),
+      borderColor:lineColors[ln],backgroundColor:'transparent',pointRadius:2,tension:0.3,spanGaps:true,borderWidth:2});
+  });
+  // Total 완전불량
+  datasets.push({label:'Total '+t('fullDef'),data:dates.map(function(dt){
+    var tp=0,tw=0;lines.forEach(function(l){var dd=D.lossByLineDate[dt]&&D.lossByLineDate[dt][l];if(dd&&dd.cd>0&&dd.p>0){tp+=dd.p;tw+=dd.p*dd.cd;}});
+    return tp>0?Math.round(tw/tp*10000)/100:null;
+  }),borderColor:lineColors.Total,backgroundColor:'transparent',pointRadius:2,tension:0.3,spanGaps:true,borderWidth:3});
+  // 치수불량 datasets (점선)
+  lines.forEach(function(ln){
+    datasets.push({label:ln+' '+t('dimDef'),data:dates.map(function(dt){var d=D.lossByLineDate[dt]&&D.lossByLineDate[dt][ln];return d&&d.dd>0?Math.round(d.dd*10000)/100:null;}),
+      borderColor:lineColors[ln],backgroundColor:'transparent',pointRadius:2,tension:0.3,spanGaps:true,borderWidth:2,borderDash:[5,3]});
+  });
+  // Total 치수불량
+  datasets.push({label:'Total '+t('dimDef'),data:dates.map(function(dt){
+    var tp=0,tw=0;lines.forEach(function(l){var dd=D.lossByLineDate[dt]&&D.lossByLineDate[dt][l];if(dd&&dd.dd>0&&dd.p>0){tp+=dd.p;tw+=dd.p*dd.dd;}});
+    return tp>0?Math.round(tw/tp*10000)/100:null;
+  }),borderColor:lineColors.Total,backgroundColor:'transparent',pointRadius:2,tension:0.3,spanGaps:true,borderWidth:3,borderDash:[5,3]});
+
+  var ch=new Chart(canvas,{type:'line',
+    data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),datasets:datasets},
+    options:{responsive:true,maintainAspectRatio:true,aspectRatio:2,
+      plugins:{legend:{labels:{color:'#94a3b8',font:{size:10}},position:'bottom'},
+        tooltip:{backgroundColor:'#0a0a0a',titleColor:'#60a5fa',bodyColor:'#e2e8f0',callbacks:{label:function(c){return c.dataset.label+': '+(c.parsed.y!=null?c.parsed.y.toFixed(2)+'%':'-');}}}},
+      scales:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'#1f2937'}},
+        y:{ticks:{color:'#94a3b8',font:{size:10},callback:function(v){return v+'%'}},grid:{color:'#1f2937'},min:0,
+          title:{display:true,text:'%',color:'#64748b',font:{size:10}}}}}});
+  charts.push(ch);
 }
 
 function buildSTAnalysisPage(key,viewType){
