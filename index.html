@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>현황 v12.7</title>
+<title>현황 v12.8</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -33,6 +33,7 @@ body{font-family:'넥슨Lv2고딕','NEXON Lv2 Gothic',sans-serif;background:#000
 .sum-tbl th,.sum-tbl td{padding:8px 12px;border:1px solid #1a1a1a;text-align:center}
 .sum-tbl th{background:#1a1a1a;color:#e2e8f0;font-weight:700;white-space:nowrap}
 .sum-tbl td{color:#cbd5e1}
+.ov-sum{font-size:11px}.ov-sum th,.ov-sum td{padding:4px 8px}
 .sum-tbl .good{color:#22c55e;font-weight:700}
 .sum-tbl .bad{color:#ef4444;font-weight:700}
 .sum-tbl .kpi-target{color:#f59e0b;font-weight:600;font-size:11px}
@@ -90,7 +91,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 현황 v12.7</h1>
+<h1>📊 현황 v12.8</h1>
 <div style="position:absolute;top:12px;right:20px;display:flex;gap:4px;align-items:center">
 <label class="file-btn" for="fileInput" id="fileBtnLabel" style="min-width:56px">파일선택</label>
 <button id="clearBtn" class="hd-btn" style="display:none" onclick="clearData()">초기화</button>
@@ -267,6 +268,7 @@ dimDef:'치수불량',
 prevDay:'전일',
 inspDefW:'불량수량',
 ovInspTblTitle:'완전+치수 현황',
+ovSumTitle:'전일요약',
 ovInspWorstTitle:'검사기 불량,정지 Worst 5',
 inspTimeW:'정지시간'
 },
@@ -415,6 +417,7 @@ dimDef:'尺寸不良',
 prevDay:'前日',
 inspDefW:'不良数量',
 ovInspTblTitle:'完全+尺寸 现况',
+ovSumTitle:'前日汇总',
 ovInspWorstTitle:'检查机 不良,停机 Worst 5',
 inspTimeW:'停机时间'
 }
@@ -434,7 +437,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='12.7'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='12.8'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -1240,6 +1243,13 @@ function buildStopTableWide(data){
 }
 
 var _summaryDate='';
+var _ovSumDate='';
+function renderOverviewSum(date){
+  _ovSumDate=date;
+  var panel=document.getElementById('overviewPanel');
+  if(panel){panel.innerHTML=buildOverviewPage();initOverviewLossChart();initOverviewUtilChart();initOverviewInspChart();initOverviewDailyChart();
+    setTimeout(function(){panel.querySelectorAll('.hc').forEach(function(el){el.scrollLeft=el.scrollWidth;});},50);}
+}
 function renderSummaryWithDate(date){
   _summaryDate=date;
   var panel=document.getElementById('summaryPanel');
@@ -1559,9 +1569,9 @@ function buildOverviewPage(){
   var dates=D.lossDates||[];
   var allDates=D.all_dates||[];
 
-  // --- 0) 당일 전체 요약 ---
+  // --- 0) 전일요약 ---
   if(dates.length>0){
-    var _ovLast=dates[dates.length-1];
+    var _ovLast=_ovSumDate&&dates.indexOf(_ovSumDate)>=0?_ovSumDate:dates[dates.length-1];
     var _ovLS=D.lineSummary||{};
     var _ovLns=['G','H','K'];
     // 가동설비
@@ -1599,8 +1609,12 @@ function buildOverviewPage(){
     // 기술조정
     function _ovTech(line){var dd=D.lossDetailByDateEq[_ovLast]||{};var s=0;Object.keys(dd).forEach(function(eq){if(!line||eq[0]===line)s+=dd[eq].larr[9];});return s;}
 
-    h+='<div class="bx"><h3>'+t('prevDay')+' ('+_ovLast+') '+t('total')+' '+t('tabOverview')+'</h3>';
-    h+='<table class="sum-tbl" style="font-size:12px"><thead><tr><th>'+t('category')+'</th><th style="color:#60a5fa">Total</th>';
+    var _ovSelS='background:#1a1a1a;color:#e2e8f0;border:1px solid #2a2a2a;border-radius:4px;padding:2px 6px;font-size:11px';
+    h+='<div class="bx"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('ovSumTitle')+' ('+_ovLast+')';
+    h+='<span style="margin-left:auto"><select onchange="renderOverviewSum(this.value)" style="'+_ovSelS+'">';
+    dates.forEach(function(d){h+='<option value="'+d+'"'+(d===_ovLast?' selected':'')+'>'+d+'</option>';});
+    h+='</select></span></h3>';
+    h+='<table class="sum-tbl ov-sum"><thead><tr><th>'+t('category')+'</th><th style="color:#60a5fa">Total</th>';
     _ovLns.forEach(function(ln){h+='<th>'+ln+'</th>';});
     h+='</tr></thead><tbody>';
     // 가동설비
@@ -1627,11 +1641,7 @@ function buildOverviewPage(){
     h+='</tbody></table></div>';
   }
 
-  // --- 1) Loss 히트맵 테이블 (클릭→Loss탭) ---
-  h+='<div class="bx" style="cursor:pointer" onclick="go(1)"><h3>'+t('lossTitle')+' <em style="color:#94a3b8;font-size:10px">▶ '+t('lossDetail')+'</em></h3>';
-  h+=buildHmLegend('loss');
-  _buildLossDailyTableOnly=true;h+=buildLossDaily();_buildLossDailyTableOnly=false;
-  h+='</div>';
+  // (Loss 히트맵 테이블은 Loss 페이지로 이동됨)
 
   // --- 2) 일간 Loss 그래프 ---
   h+='<div class="bx"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('ovLossChart');
@@ -1841,27 +1851,41 @@ function initOverviewInspChart(){
 function initOverviewDailyChart(){
   var canvas=document.getElementById('ovDailyChart');
   if(!canvas||!D||!D.daily||!D.daily.length)return;
-  var maxTime=0,fixedQty=10000,exceeded=false;
-  D.daily.forEach(function(r){var t2=Math.round(r.avgTime||0);if(t2>maxTime)maxTime=t2;var d2=Math.round(r.defect);if(d2>fixedQty){fixedQty=Math.ceil(d2/1000)*1000;exceeded=true}});
-  var fixedTime=Math.ceil(maxTime*1.1/10)*10||100;
+  var data=D.daily;
+  var labels=data.map(function(r){return r['일자str'];});
+  var barData=data.map(function(r){return Math.round(r.avgTime||0);});
+  var lineData=data.map(function(r){return Math.round(r.defect);});
   var _dailyLbl={id:'ovDailyLbl',afterDatasetsDraw:function(chart){var ctx=chart.ctx;ctx.save();
-    // 막대(정지시간) 상단 흰색
+    // 막대(정지시간) 바 안쪽 하단(일자 위) 흰색
     var barDs=chart.data.datasets[0];var barMeta=chart.getDatasetMeta(0);
-    ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillStyle='#fff';
-    barMeta.data.forEach(function(bar,i){var v=barDs.data[i];if(v>0)ctx.fillText(v,bar.x,bar.y-2);});
-    // 꺾은선(불량수량) 위 빨간색
-    if(chart.data.datasets.length>1){var lineDs=chart.data.datasets[1];var lineMeta=chart.getDatasetMeta(1);ctx.fillStyle='#ef4444';
-    lineMeta.data.forEach(function(pt,i){var v=lineDs.data[i];if(v!=null&&v>0)ctx.fillText(Math.round(v).toLocaleString(),pt.x,pt.y-5);});}
+    ctx.font='bold 8px sans-serif';ctx.textAlign='center';ctx.fillStyle='#fff';
+    barMeta.data.forEach(function(bar,i){var v=barDs.data[i];if(v>0){ctx.textBaseline='bottom';ctx.fillText(v,bar.x,bar.base-2);}});
+    // 꺾은선(불량수량) 위 빨간색 k단위
+    if(chart.data.datasets.length>1){var lineDs2=chart.data.datasets[1];var lineMeta2=chart.getDatasetMeta(1);ctx.fillStyle='#ef4444';ctx.textBaseline='bottom';
+    lineMeta2.data.forEach(function(pt,i){var v=lineDs2.data[i];if(v!=null&&v>0){var txt=v>=1000?(v/1000).toFixed(1)+'k':v.toString();ctx.fillText(txt,pt.x,pt.y-4);}});}
     ctx.restore();}};
-  var ch=makeDailyChart('ovDailyChart',D.daily,'Total','#3b82f6',null,exceeded?fixedTime:null,exceeded?fixedQty:null);
-  // Override aspectRatio + legend + add label plugin
-  if(ch&&ch.options){ch.options.aspectRatio=2.5;ch.options.maintainAspectRatio=true;if(ch.options.plugins)ch.options.plugins.legend={display:false};ch.config.plugins=[_dailyLbl];ch.update();}
+  var ch=new Chart(canvas,{type:'bar',plugins:[_dailyLbl],data:{labels:labels,datasets:[
+    {label:t('dailyTimeMin'),data:barData,backgroundColor:'#3b82f6B3',borderRadius:4,yAxisID:'y',order:2},
+    {label:t('defect'),data:lineData,type:'line',borderColor:'#ef4444',borderWidth:2,pointRadius:3,pointBackgroundColor:'#ef4444',yAxisID:'y1',tension:.3,order:1}
+  ]},options:{responsive:true,maintainAspectRatio:true,aspectRatio:2.5,plugins:{legend:{display:false},tooltip:{backgroundColor:'#0a0a0a',bodyColor:'#e2e8f0'}},scales:{
+    x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'#1a1a1a'}},
+    y:{position:'left',ticks:{color:'#3b82f6',font:{size:8}},grid:{color:'#1a1a1a'},beginAtZero:true},
+    y1:{position:'right',ticks:{color:'#ef4444',font:{size:8},callback:function(v){return v>=1000?(v/1000)+'k':v;}},grid:{drawOnChartArea:false},beginAtZero:true}
+  }}});
+  charts.push(ch);
 }
 // ===================== 요약 끝 =====================
 
 function buildLossPage(){
   if(!D)return'<div style="padding:20px;color:#94a3b8">'+t('noData')+'</div>';
-  var h='<div class="bx"><h3>📉 '+t('lossTitle')+' - '+t('lossDetail')+'</h3>';
+  var h='';
+  // 일간 Loss 현황 히트맵 테이블
+  h+='<div class="bx"><h3>'+t('lossTitle')+'</h3>';
+  h+=buildHmLegend('loss');
+  _buildLossDailyTableOnly=true;h+=buildLossDaily();_buildLossDailyTableOnly=false;
+  h+='</div>';
+  // 상세 Loss 현황
+  h+='<div class="bx"><h3>📉 '+t('lossDetail')+'</h3>';
   h+='<div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap">';
   h+='<span style="margin-left:auto;display:flex;gap:6px;align-items:center">'+buildHmSettings('loss')+'</span>';
   h+='</div>';
