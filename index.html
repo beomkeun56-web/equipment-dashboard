@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>현황 v14.2</title>
+<title>현황 v14.3</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -92,7 +92,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 현황 v14.2</h1>
+<h1>📊 현황 v14.3</h1>
 <div style="position:absolute;top:12px;right:20px;display:flex;gap:4px;align-items:center">
 <label class="file-btn" for="fileInput" id="fileBtnLabel" style="min-width:56px">파일선택</label>
 <button id="clearBtn" class="hd-btn" style="display:none" onclick="clearData()">초기화</button>
@@ -438,7 +438,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='14.2'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='14.3'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -1166,12 +1166,17 @@ function showOvSumPopup(type,line){
     var rows=(D.allRows||[]).filter(function(r){return r.dateStr===dt&&_ovMl(r.eq,line)&&r.stop;});
     rows.sort(function(a,b){return(b.kpiTime||0)-(a.kpiTime||0);});
     var tmMax=0;rows.forEach(function(r){if((r.kpiTime||0)>tmMax)tmMax=r.kpiTime;});
-    tb='<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:12px"><thead><tr><th>#</th><th>설비</th><th>소분류</th><th>내용</th><th style="'+ra+'">정지(분)</th></tr></thead><tbody>';
+    tb='<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:12px"><thead><tr><th>#</th><th>설비</th><th>소분류</th><th>내용</th><th style="'+ra+'">정지(분)</th><th>정지</th></tr></thead><tbody>';
     var total=0;rows.forEach(function(r,i){total+=r.kpiTime||0;
-      tb+='<tr><td>'+(i+1)+'</td><td>'+r.eq+'</td><td>'+(r.sub||'')+'</td><td>'+(r.detail||'')+'</td><td style="'+ra+';'+getHmStyle(r.kpiTime||0,tmMax,'loss')+'">'+Math.round(r.kpiTime||0)+'</td></tr>';
+      tb+='<tr><td>'+(i+1)+'</td><td>'+r.eq+'</td><td>'+(r.sub||'')+'</td><td>'+(r.detail||'')+'</td><td style="'+ra+';'+getHmStyle(r.kpiTime||0,tmMax,'loss')+'">'+Math.round(r.kpiTime||0)+'</td><td>'+(r.stop?'⛔':'')+'</td></tr>';
     });
-    tb+='<tr style="font-weight:700;border-top:2px solid #3b82f6"><td></td><td colspan="3">합계 ('+rows.length+'건)</td><td style="'+ra+'">'+Math.round(total)+'분</td></tr>';
-    tb+='<tr style="color:#f59e0b"><td></td><td colspan="3">평균 ('+rows.length+'대)</td><td style="'+ra+'">'+(rows.length>0?Math.round(total/rows.length):0)+'분</td></tr></tbody></table></div>';
+    // 설비별 KPI 정지시간 합산 → 정지있는 설비수로 평균 (요약표와 동일)
+    var stops=(D.kpiStopByDateEq||{})[dt]||{};
+    var stopEqs=Object.keys(stops).filter(function(eq){return _ovMl(eq,line)&&stops[eq]>0;});
+    var kpiTotal=stopEqs.reduce(function(s,eq){return s+stops[eq]},0);
+    var kpiAvg=stopEqs.length>0?Math.round(kpiTotal/stopEqs.length):0;
+    tb+='<tr style="font-weight:700;border-top:2px solid #3b82f6"><td></td><td colspan="4">합계 ('+rows.length+'건)</td><td style="'+ra+'">'+Math.round(total)+'분</td></tr>';
+    tb+='<tr style="color:#f59e0b"><td></td><td colspan="4">평균 ('+stopEqs.length+'대)</td><td style="'+ra+'">'+kpiAvg+'분</td></tr></tbody></table></div>';
   }
   else if(type==='fullDef'){
     title='완전불량 Worst ('+lineLbl+' · '+dt+')';
