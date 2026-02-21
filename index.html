@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Production Performance v10.2</title>
+<title>Production Performance v10.3</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v10.2</h1>
+<h1>📊 Production Performance v10.3</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -2035,7 +2035,7 @@ function buildInspPage(){
   h+='<div class="bx"><h4 style="color:#ef4444;margin-bottom:8px">🔴 '+t('inspDefChart')+' Worst 5</h4>';
   h+='<table class="worst-tbl"><thead><tr><th>#</th><th>'+t('line')+'</th><th>'+t('date')+'</th><th>'+t('category')+'</th><th>%</th></tr></thead><tbody>';
   inspDefList.slice(0,5).forEach(function(item,i){
-    h+='<tr><td>'+(i+1)+'</td><td>'+item.line+'</td><td>'+item.date+'</td><td style="font-size:10px;color:#94a3b8">'+item.type+'</td><td style="color:#ef4444;font-weight:700">'+(item.val*100).toFixed(2)+'%</td></tr>';
+    h+='<tr><td>'+(i+1)+'</td><td>'+item.line+'</td><td>'+item.date+'</td><td style="font-size:10px;color:#94a3b8">'+item.type+'</td><td style="color:#ef4444;font-weight:700">'+item.val.toFixed(2)+'%</td></tr>';
   });
   if(!inspDefList.length)h+='<tr><td colspan="5" style="color:#94a3b8">'+t('noData')+'</td></tr>';
   h+='</tbody></table></div>';
@@ -2086,7 +2086,7 @@ function initInspChart(){
     return{label:cfg.label,data:dates.map(function(dt){
       var d=D.lossByLineDate[dt]&&D.lossByLineDate[dt][cfg.ln];
       if(!d)return null;var v=d[cfg.key];
-      return v>0?Math.round(v*10000)/100:null;
+      return v>0?Math.round(v*100)/100:null;
     }),borderColor:cfg.color,backgroundColor:'transparent',pointRadius:3,pointBackgroundColor:cfg.color,tension:0.3,spanGaps:true,borderWidth:2};
   });
   console.log('[검사기] 첫날짜 데이터:', JSON.stringify(D.lossByLineDate[dates[0]]));
