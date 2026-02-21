@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>현황 v14.5</title>
+<title>현황 v14.6</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -92,7 +92,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 현황 v14.5</h1>
+<h1>📊 현황 v14.6</h1>
 <div style="position:absolute;top:12px;right:20px;display:flex;gap:4px;align-items:center">
 <label class="file-btn" for="fileInput" id="fileBtnLabel" style="min-width:56px">파일선택</label>
 <button id="clearBtn" class="hd-btn" style="display:none" onclick="clearData()">초기화</button>
@@ -438,7 +438,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='14.5'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='14.6'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -1362,12 +1362,19 @@ function makeDailyChart(canvasId, data, title, barColor, lineFilt, yMax, y1Max){
     eqCntByDate[d]=Object.keys(eqs).length;
   });
   var labels=data.map(function(r){var d=r['일자str'];return[d,(eqCntByDate[d]||0)+t('eqUnit')]});
-  var ch=new Chart(canvasId,{type:'bar',data:{labels:labels,datasets:[
+  var _dcLbl={id:'dcLbl_'+canvasId,afterDatasetsDraw:function(chart){var ctx=chart.ctx;ctx.save();
+    var barDs=chart.data.datasets[0];var barMeta=chart.getDatasetMeta(0);
+    ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillStyle='#fff';
+    barMeta.data.forEach(function(bar,i){var v=barDs.data[i];if(v>0){ctx.textBaseline='bottom';ctx.fillText(v+t('min'),bar.x,bar.base-2);}});
+    if(chart.data.datasets.length>1){var lineDs=chart.data.datasets[1];var lineMeta=chart.getDatasetMeta(1);ctx.fillStyle='#ef4444';ctx.textBaseline='bottom';
+    lineMeta.data.forEach(function(pt,i){var v=lineDs.data[i];if(v!=null&&v>0){var txt=v>=1000?Math.round(v/1000)+'k':v.toString();ctx.fillText(txt,pt.x,pt.y-4);}});}
+    ctx.restore();}};
+  var ch=new Chart(canvasId,{type:'bar',plugins:[_dcLbl],data:{labels:labels,datasets:[
     {label:t('dailyTimeMin')+'('+t('hmAvg')+')',data:data.map(function(r){return Math.round(r.avgTime||0)}),backgroundColor:barColor+'B3',borderRadius:4,yAxisID:'y',order:2},
     {label:t('defect'),data:data.map(function(r){return Math.round(r.defect)}),type:'line',borderColor:'#ef4444',borderWidth:2,pointRadius:3,pointBackgroundColor:'#ef4444',yAxisID:'y1',tension:.3,order:1}
   ]},options:{responsive:true,maintainAspectRatio:true,onClick:function(evt,els){
     if(!els.length)return;var idx=els[0].index;var date=data[idx]['일자str'];showDayDetail(date,lineFilt||null);
-  },plugins:{legend:{labels:{color:'#94a3b8',font:{size:10}}},tooltip:{backgroundColor:'#0a0a0a',titleColor:'#60a5fa',bodyColor:'#e2e8f0',callbacks:{title:function(items){if(!items.length)return'';var idx=items[0].dataIndex;return data[idx]['일자str']+' ('+( eqCntByDate[data[idx]['일자str']]||0)+'대)'},label:function(c){return c.dataset.label+': '+c.parsed.y.toLocaleString()}}}},scales:{
+  },plugins:{legend:{display:false},tooltip:{backgroundColor:'#0a0a0a',titleColor:'#60a5fa',bodyColor:'#e2e8f0',callbacks:{title:function(items){if(!items.length)return'';var idx=items[0].dataIndex;return data[idx]['일자str']+' ('+( eqCntByDate[data[idx]['일자str']]||0)+'대)'},label:function(c){return c.dataset.label+': '+c.parsed.y.toLocaleString()}}}},scales:{
     x:{ticks:{color:'#94a3b8',font:{size:10},callback:function(val,idx){var lb=this.getLabelForValue(idx);if(Array.isArray(lb))return lb;return[lb]}},grid:{color:'#1a1a1a'}},
     y:{position:'left',ticks:{color:barColor,callback:function(v){return v.toLocaleString()}},grid:{color:'#1a1a1a'},title:{display:true,text:t('dailyTimeMin')+'('+t('hmAvg')+')',color:barColor,font:{size:10}},beginAtZero:true,max:yMax||undefined},
     y1:{position:'right',ticks:{color:'#ef4444',font:{size:9},callback:function(v){return v.toLocaleString()}},grid:{drawOnChartArea:false},title:{display:true,text:t('defect'),color:'#ef4444',font:{size:10}},beginAtZero:true,max:y1Max||undefined}
@@ -1506,27 +1513,19 @@ function buildSummaryPage(){
   h+='<span style="margin-left:auto"><label style="color:#94a3b8;font-size:11px">'+t('kpiDateLabel')+'</label><select onchange="renderSummaryWithDate(this.value)" style="'+selS2+'">';
   dates.slice().reverse().forEach(function(d){h+='<option value="'+d+'"'+(d===lastDate?' selected':'')+'>'+d+'</option>';});
   h+='</select></span></h3>';
-  h+='<table class="sum-tbl"><thead><tr><th>'+t('category')+'</th><th style="color:#60a5fa">'+t('total')+'</th>';
+  function _kpiAchvTd(v,tgt){var a=v<=0?100:(v<=tgt?100:Math.round(tgt/v*100));var clr=a>=100?'#22c55e':'#ef4444';return'<td style="color:'+clr+';font-weight:700">'+a+'%</td>';}
+  h+='<table class="sum-tbl"><thead><tr><th>'+t('category')+'</th><th style="color:#60a5fa">실적</th><th>달성율</th>';
   lines.forEach(function(ln){h+='<th style="color:'+lineColors[ln]+'">'+ln+' Line</th>'});
   h+='</tr></thead><tbody>';
 
   // KPI 팝업용 날짜 데이터 전역 저장
   window._kpiDates={day:[lastDate],week:weekDates,month:monthDates};
 
-  // 전일
-  var allDayAvg=getAllEqAvgStop(lastDate);
-  h+='<tr><td>'+t('yesterday')+'</td>';
-  h+='<td class="hm-click" onclick="showKpiDetail(window._kpiDates.day,\'\')">'+fmtCell(allDayAvg,KPI_TARGET)+'</td>';
-  lines.forEach(function(ln){
-    var v=getLineEqAvgStop(lastDate,ln);
-    h+='<td class="hm-click" onclick="showKpiDetail(window._kpiDates.day,\''+ln+'\')">'+fmtCell(v,KPI_TARGET)+'</td>';
-  });
-  h+='</tr>';
-
   // 주간
   var allWeekAvg=getAllEqAvgStopMulti(weekDates);
   h+='<tr><td>'+t('weekly')+'</td>';
   h+='<td class="hm-click" onclick="showKpiDetail(window._kpiDates.week,\'\')">'+fmtCell(allWeekAvg,KPI_TARGET)+'</td>';
+  h+=_kpiAchvTd(allWeekAvg,KPI_TARGET);
   lines.forEach(function(ln){
     var v=getLineEqAvgStopMulti(weekDates,ln);
     h+='<td class="hm-click" onclick="showKpiDetail(window._kpiDates.week,\''+ln+'\')">'+fmtCell(v,KPI_TARGET)+'</td>';
@@ -1537,6 +1536,7 @@ function buildSummaryPage(){
   var allMonthAvg=getAllEqAvgStopMulti(monthDates);
   h+='<tr><td>'+t('monthly')+'</td>';
   h+='<td class="hm-click" onclick="showKpiDetail(window._kpiDates.month,\'\')">'+fmtCell(allMonthAvg,KPI_TARGET)+'</td>';
+  h+=_kpiAchvTd(allMonthAvg,KPI_TARGET);
   lines.forEach(function(ln){
     var v=getLineEqAvgStopMulti(monthDates,ln);
     h+='<td class="hm-click" onclick="showKpiDetail(window._kpiDates.month,\''+ln+'\')">'+fmtCell(v,KPI_TARGET)+'</td>';
@@ -1746,6 +1746,31 @@ function buildOverviewPage(){
   var dates=D.lossDates||[];
   var allDates=D.all_dates||[];
 
+  // (Loss 히트맵 테이블은 Loss 페이지로 이동됨)
+
+  // --- 2) 일간 Loss 그래프 ---
+  h+='<div class="bx"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('ovLossChart');
+  h+='<span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;font-size:9px;font-weight:400">';
+  ['K1','K2','G','H','E','Total'].forEach(function(ln){h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:3px;background:'+LOSS_LINE_COLORS[ln]+'"></span>'+ln+'</span>';});
+  h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #f59e0b"></span>'+t('target')+'6%</span>';
+  h+='</span></h3>';
+  h+='<canvas id="ovLossChart"></canvas></div>';
+
+  // --- 3) Total 가동율 그래프 (클릭→가동율탭) ---
+  h+='<div class="bx" style="cursor:pointer" onclick="go(2)"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('utilTitle')+' <em style="color:#94a3b8;font-size:10px">▶ '+t('tabUtil')+'</em>';
+  h+='<span style="margin-left:auto;display:flex;gap:6px;font-size:9px;font-weight:400">';
+  h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:3px;background:#f87171"></span>'+t('utilRate')+'</span>';
+  h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #f59e0b"></span>'+t('utilTarget')+'95%</span>';
+  h+='</span></h3>';
+  h+='<canvas id="ovUtilChart"></canvas></div>';
+
+  // --- 3.5) 전체 일자별 정지시간/불량수량 그래프 (클릭→정지시간탭) ---
+  h+='<div class="bx" style="cursor:pointer" onclick="go(3)"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('ovDailyTitle')+' <em style="color:#94a3b8;font-size:10px">▶ '+t('tabDaily')+'</em>';
+  h+='<span style="margin-left:auto;display:flex;gap:6px;font-size:9px;font-weight:400">';
+  h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:8px;background:#3b82f6B3;border-radius:2px"></span>'+t('dailyTimeMin')+'</span>';
+  h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:3px;background:#ef4444"></span>'+t('defect')+'</span>';
+  h+='</span></h3>';
+  h+='<canvas id="ovDailyChart"></canvas></div>';
   // --- 0) 전일요약 ---
   if(dates.length>0){
     var _ovLast=_ovSumDate&&dates.indexOf(_ovSumDate)>=0?_ovSumDate:dates[dates.length-1];
@@ -1830,31 +1855,6 @@ function buildOverviewPage(){
     h+='</tbody></table></div>';
   }
 
-  // (Loss 히트맵 테이블은 Loss 페이지로 이동됨)
-
-  // --- 2) 일간 Loss 그래프 ---
-  h+='<div class="bx"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('ovLossChart');
-  h+='<span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;font-size:9px;font-weight:400">';
-  ['K1','K2','G','H','E','Total'].forEach(function(ln){h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:3px;background:'+LOSS_LINE_COLORS[ln]+'"></span>'+ln+'</span>';});
-  h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #f59e0b"></span>'+t('target')+'6%</span>';
-  h+='</span></h3>';
-  h+='<canvas id="ovLossChart"></canvas></div>';
-
-  // --- 3) Total 가동율 그래프 (클릭→가동율탭) ---
-  h+='<div class="bx" style="cursor:pointer" onclick="go(2)"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('utilTitle')+' <em style="color:#94a3b8;font-size:10px">▶ '+t('tabUtil')+'</em>';
-  h+='<span style="margin-left:auto;display:flex;gap:6px;font-size:9px;font-weight:400">';
-  h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:3px;background:#f87171"></span>'+t('utilRate')+'</span>';
-  h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #f59e0b"></span>'+t('utilTarget')+'95%</span>';
-  h+='</span></h3>';
-  h+='<canvas id="ovUtilChart"></canvas></div>';
-
-  // --- 3.5) 전체 일자별 정지시간/불량수량 그래프 (클릭→정지시간탭) ---
-  h+='<div class="bx" style="cursor:pointer" onclick="go(3)"><h3 style="display:flex;align-items:center;flex-wrap:wrap">'+t('ovDailyTitle')+' <em style="color:#94a3b8;font-size:10px">▶ '+t('tabDaily')+'</em>';
-  h+='<span style="margin-left:auto;display:flex;gap:6px;font-size:9px;font-weight:400">';
-  h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:8px;background:#3b82f6B3;border-radius:2px"></span>'+t('dailyTimeMin')+'</span>';
-  h+='<span style="display:flex;align-items:center;gap:2px"><span style="display:inline-block;width:14px;height:3px;background:#ef4444"></span>'+t('defect')+'</span>';
-  h+='</span></h3>';
-  h+='<canvas id="ovDailyChart"></canvas></div>';
 
   // --- 4~6) 정지시간 KPI + TOP3 + Worst5 (buildSummaryPage 로직) ---
   if(allDates.length>0){
@@ -1878,12 +1878,14 @@ function buildOverviewPage(){
 
     // 4) KPI 표
     h+='<div class="bx"><h3>'+t('kpiTitle')+' = '+t('target')+' '+KPI_TARGET+t('min')+'</h3>';
-    h+='<table class="sum-tbl"><thead><tr><th>'+t('category')+'</th><th style="color:#60a5fa">'+t('total')+'</th>';
+    function _kpiAchvTd2(v,tgt){var a=v<=0?100:(v<=tgt?100:Math.round(tgt/v*100));var clr=a>=100?'#22c55e':'#ef4444';return'<td style="color:'+clr+';font-weight:700">'+a+'%</td>';}
+    h+='<table class="sum-tbl"><thead><tr><th>'+t('category')+'</th><th style="color:#60a5fa">실적</th><th>달성율</th>';
     lines.forEach(function(ln){h+='<th style="color:'+lineColors[ln]+'">'+ln+' Line</th>';});
     h+='</tr></thead><tbody>';
-    [{label:t('yesterday'),dts:[sLastDate],pk:'day'},{label:t('weekly'),dts:sWeek,pk:'week'},{label:t('monthly'),dts:sMonth,pk:'month'}].forEach(function(p){
+    [{label:t('weekly'),dts:sWeek,pk:'week'},{label:t('monthly'),dts:sMonth,pk:'month'}].forEach(function(p){
       var allV=p.dts.length===1?_getAllAvg(p.dts[0]):_getAllAvgM(p.dts);
       h+='<tr><td>'+p.label+'</td><td class="hm-click" onclick="showKpiDetail(window._kpiDates.'+p.pk+',\'\')">'+_fc(allV)+'</td>';
+      h+=_kpiAchvTd2(allV,KPI_TARGET);
       lines.forEach(function(ln){var v=p.dts.length===1?_getLineAvg(p.dts[0],ln):_getLineAvgM(p.dts,ln);h+='<td class="hm-click" onclick="showKpiDetail(window._kpiDates.'+p.pk+',\''+ln+'\')">'+_fc(v)+'</td>';});
       h+='</tr>';
     });
@@ -2330,10 +2332,10 @@ function initUtilCharts(){
       data:{labels:dates.map(function(d){var dt=new Date(d+'T00:00:00');return(dt.getMonth()+1)+'/'+(dt.getDate());}),
         datasets:[
           {label:g.key+' '+t('utilRate'),data:data,borderColor:g.color,backgroundColor:g.color+'20',pointRadius:3,tension:0.3,fill:true,spanGaps:true},
-          {label:t('utilTarget')+'(90%)',data:dates.map(function(){return 90;}),borderColor:'#f59e0b',borderDash:[5,5],pointRadius:0,tension:0}
+          {label:t('utilTarget')+'(95%)',data:dates.map(function(){return 95;}),borderColor:'#f59e0b',borderDash:[5,5],pointRadius:0,tension:0,borderWidth:1}
         ]},
-      options:{responsive:true,maintainAspectRatio:true,aspectRatio:3,
-        plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}}}},
+      options:{responsive:true,maintainAspectRatio:true,aspectRatio:2.5,
+        plugins:{legend:{display:false}},
         scales:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'#1f2937'}},
           y:{ticks:{color:'#94a3b8',font:{size:10},callback:function(v){return v+'%'}},grid:{color:'#1f2937'},min:50,max:110,
             title:{display:true,text:t('utilRate')+'(%)',color:'#64748b',font:{size:10}}}}}});
