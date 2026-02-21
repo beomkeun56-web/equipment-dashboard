@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Performance v8.0</title>
+<title>Production Performance v8.1</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v8.0</h1>
+<h1>📊 Production Performance v8.1</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -398,7 +398,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='8.0'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='8.1'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -514,9 +514,10 @@ function processWorkbook(wb){
         if(!stopByDateEq[dateStr])stopByDateEq[dateStr]={};
         stopByDateEq[dateStr][eq]=(stopByDateEq[dateStr][eq]||0)+sm;
       }
-      // KPI용 정지시간: 全카테고리 停 행 + 停机/开机 제외 + col20 정지시간
+      // KPI용 정지시간: PM调整(大分类) + 停机/开机 제외 + 有无停机=停 + col20 停机时间
+      var _kpiCat=(r[13]||'').toString().trim();
       var _kpiSub=(r[14]||'').toString().trim();
-      if(_stopYN==='停' && _kpiSub!=='停机' && _kpiSub!=='开机' && _kpiSub){
+      if(_kpiCat==='PM调整' && _stopYN==='停' && _kpiSub!=='停机' && _kpiSub!=='开机' && _kpiSub){
         var kpiSm=typeof r[20]==='number'?r[20]:(parseFloat(r[20])||0);
         if(kpiSm>0 && kpiSm<=1000){
           if(!kpiStopByDateEq[dateStr])kpiStopByDateEq[dateStr]={};
