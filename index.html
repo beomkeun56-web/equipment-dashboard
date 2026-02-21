@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Production Performance v10.4</title>
+<title>Production Performance v10.5</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,7 +85,7 @@ table.ht thead th:first-child{z-index:4}
 </head>
 <body>
 <div class="hd" style="position:relative">
-<h1>📊 Production Performance v10.4</h1>
+<h1>📊 Production Performance v10.5</h1>
 <div id="langSel" style="position:absolute;top:12px;right:16px;display:flex;gap:4px;align-items:center"><span style="font-size:14px">🌐</span><button onclick="setLang('ko')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langKo">한국어</button><button onclick="setLang('zh')" style="padding:3px 10px;border-radius:4px;border:1px solid #3b82f6;font-size:11px;cursor:pointer;font-family:inherit;min-width:52px;text-align:center" id="langZh">中文</button></div>
 <p id="info">엑셀 파일을 업로드하면 분석이 시작됩니다</p>
 </div>
@@ -416,7 +416,7 @@ var wd=document.getElementById('welcomeDesc');if(wd)wd.innerHTML='\ud83d\udcc2 '
 }
 
 var LOSS_DETAIL_HDR_FN=function(){return t("lossDetailHdr");};
-var DATA_VERSION='10.1'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
+var DATA_VERSION='10.5'; // 이 값이 바뀌면 localStorage 캐시 자동 삭제
 
 // === IndexedDB: 원본 엑셀 파일 캐싱 (버전변경 시 자동 재처리) ===
 function _idbOpen(cb){
@@ -574,23 +574,56 @@ function processWorkbook(wb){
   if(_lossSheet&&wb.Sheets[_lossSheet]){
     var rawX=XLSX.utils.sheet_to_json(wb.Sheets[_lossSheet],{header:1,defval:null,raw:true});
     _lossDbg.found=_lossSheet;
-    // 日别汇总 헤더 진단 (col V=21, Z=25 포함)
-    for(var _xhi=0;_xhi<Math.min(rawX.length,3);_xhi++){var _xhr=rawX[_xhi];if(!_xhr)continue;var _xhv=[];for(var _xci=0;_xci<Math.min(_xhr.length,30);_xci++)_xhv.push(_xci+':'+(_xhr[_xci]!=null?String(_xhr[_xci]).substring(0,12):'N'));console.log('[日别汇总 row'+_xhi+'] '+_xhv.join(' | '));}
+    // 日别汇总 헤더에서 完全不良%/尺寸不良% 컬럼 자동 탐색
+    var _colCD=-1,_colDD=-1;
+    for(var _xhi=0;_xhi<Math.min(rawX.length,3);_xhi++){
+      var _xhr=rawX[_xhi];if(!_xhr)continue;
+      for(var _xci=0;_xci<_xhr.length;_xci++){
+        var _xhv=(_xhr[_xci]!=null)?String(_xhr[_xci]).trim():'';
+        if(_xhv.indexOf('完全不良')>=0&&_xhv.indexOf('%')>=0&&_colCD<0)_colCD=_xci;
+        if(_xhv.indexOf('尺寸不良')>=0&&_xhv.indexOf('%')>=0&&_colDD<0)_colDD=_xci;
+      }
+    }
+    // %가 헤더에 없으면 完全不良/尺寸不良 찾고, 값>1이면 다음컬럼이 %
+    if(_colCD<0||_colDD<0){
+      for(var _xhi2=0;_xhi2<Math.min(rawX.length,3);_xhi2++){
+        var _xhr2=rawX[_xhi2];if(!_xhr2)continue;
+        for(var _xci2=0;_xci2<_xhr2.length;_xci2++){
+          var _xhv2=(_xhr2[_xci2]!=null)?String(_xhr2[_xci2]).trim():'';
+          if(_xhv2.indexOf('完全不良')>=0&&_colCD<0)_colCD=_xci2;
+          if(_xhv2.indexOf('尺寸不良')>=0&&_colDD<0)_colDD=_xci2;
+        }
+      }
+      // 찾은 컬럼 값이 큰수(수량)이면 +1이 %일 가능성
+      for(var _dr=1;_dr<Math.min(rawX.length,10);_dr++){
+        var _drv=rawX[_dr];if(!_drv||!_drv[1])continue;
+        if(_colCD>=0&&typeof _drv[_colCD]==='number'&&_drv[_colCD]>1){_colCD++;break;}
+        if(_colCD>=0)break;
+      }
+      for(var _dr2=1;_dr2<Math.min(rawX.length,10);_dr2++){
+        var _drv2=rawX[_dr2];if(!_drv2||!_drv2[1])continue;
+        if(_colDD>=0&&typeof _drv2[_colDD]==='number'&&_drv2[_colDD]>1){_colDD++;break;}
+        if(_colDD>=0)break;
+      }
+    }
+    console.log('[日别汇总] 完全不良% col='+_colCD+', 尺寸不良% col='+_colDD);
+    // 헤더+첫데이터 디버그
+    for(var _dhi=0;_dhi<Math.min(rawX.length,3);_dhi++){var _dhr=rawX[_dhi];if(!_dhr)continue;var _dhv=[];for(var _dci=0;_dci<Math.min(_dhr.length,40);_dci++)_dhv.push(_dci+':'+(_dhr[_dci]!=null?String(_dhr[_dci]).substring(0,15):''));console.log('[日别汇总 row'+_dhi+'] '+_dhv.join(' | '));}
     var lastXDate=null;
     for(var xr=1;xr<rawX.length;xr++){
       var rx=rawX[xr];if(!rx)continue;
       if(rx[0]!=null){var ndx=parseStDate(rx[0]);if(ndx)lastXDate=ndx;else lastXDate=null;}
       if(!lastXDate)continue;
       var rline=(rx[1]||'').toString().trim();if(!rline)continue;
-      if(_lossDbg.rows===0){_lossDbg.sample='date='+lastXDate+' line='+rline+' col6='+rx[6]+' col9(稼动率)='+rx[9]+' col16='+rx[16];console.log('[日别汇总 첫데이터] '+_lossDbg.sample);}
-      if(_lossDbg.rows<6){var _cv=[];for(var _ci=15;_ci<Math.min(rx.length,32);_ci++)_cv.push(_ci+':'+rx[_ci]);console.log('[日别汇总 col15-31] row'+_lossDbg.rows+' '+rline+' → '+_cv.join(' | '));}
+      if(_lossDbg.rows===0){_lossDbg.sample='date='+lastXDate+' line='+rline+' col6='+rx[6]+' col16='+rx[16];console.log('[日别汇总 첫데이터] '+_lossDbg.sample);}
+      if(_lossDbg.rows<6&&_colCD>=0){console.log('[日别汇总 검사기] '+rline+': cd['+_colCD+']='+rx[_colCD]+' dd['+_colDD+']='+rx[_colDD]);}
       _lossDbg.rows++;
       var rprod=typeof rx[6]==='number'?rx[6]:(parseFloat(rx[6])||0);
       var rkpi=typeof rx[15]==='number'?rx[15]:(parseFloat(rx[15])||0);
       var rloss=typeof rx[16]==='number'?rx[16]:(parseFloat(rx[16])||0);
       var rutil=typeof rx[9]==='number'?rx[9]:(parseFloat(rx[9])||0);
-      var rFullDef=typeof rx[21]==='number'?rx[21]:(parseFloat(rx[21])||0); // col V=完全不良%
-      var rDimDef=typeof rx[25]==='number'?rx[25]:(parseFloat(rx[25])||0); // col Z=尺寸不良%
+      var rFullDef=_colCD>=0?(typeof rx[_colCD]==='number'?rx[_colCD]:(parseFloat(rx[_colCD])||0)):0;
+      var rDimDef=_colDD>=0?(typeof rx[_colDD]==='number'?rx[_colDD]:(parseFloat(rx[_colDD])||0)):0;
       if(rloss>=1.0)continue;
       if(!lossByLineDate[lastXDate])lossByLineDate[lastXDate]={};
       lossByLineDate[lastXDate][rline]={r:rloss,p:rprod,u:rutil,cd:rFullDef,dd:rDimDef};
